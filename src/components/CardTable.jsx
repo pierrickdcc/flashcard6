@@ -28,82 +28,43 @@ const CardTable = ({
       <table className="table">
         <thead>
           <tr>
-            {['Question', 'Réponse', 'Matière', 'Prochaine', 'Révisions', 'Actions'].map((header) => (
-              <th key={header}>
-                {header}
-              </th>
-            ))}
+            <th>Question</th>
+            <th>Réponse</th>
+            <th>Matière</th>
+            <th>Prochaine</th>
+            <th>Révisions</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
           {filteredCards.map((card) => (
             <tr key={card.id}>
+              <td>{card.front}</td>
+              <td>{card.back}</td>
               <td>
-                {editingCard?.id === card.id ? (
-                  <input
-                    value={editingCard.question}
-                    onChange={(e) => setEditingCard({ ...editingCard, question: e.target.value })}
-                    className="input"
-                  />
-                ) : (
-                  <span>{card.question}</span>
-                )}
+                <span className="subject-badge">
+                  {subjectMap.get(card.subject_id) || 'N/A'}
+                </span>
               </td>
               <td>
-                {editingCard?.id === card.id ? (
-                  <input
-                    value={editingCard.answer}
-                    onChange={(e) => setEditingCard({ ...editingCard, answer: e.target.value })}
-                    className="input"
-                  />
-                ) : (
-                  <span>{card.answer}</span>
-                )}
+                {card.next_review_date
+                  ? new Date(card.next_review_date).toLocaleDateString('fr-FR')
+                  : 'Jamais'}
               </td>
-              <td>
-                {editingCard?.id === card.id ? (
-                  <select
-                    value={editingCard.subject_id}
-                    onChange={(e) => setEditingCard({ ...editingCard, subject_id: e.target.value })}
-                    className="select"
-                  >
-                    {(subjects || []).map(s => (
-                      <option key={s.id} value={s.id}>{s.name}</option>
-                    ))}
-                  </select>
-                ) : (
-                  <span className="subject-badge">
-                    {subjectMap.get(card.subject_id) || 'N/A'}
-                  </span>
-                )}
-              </td>
-              <td>
-                {card.nextReview && !isNaN(new Date(card.nextReview)) ? new Date(card.nextReview).toLocaleDateString('fr-FR') : 'Jamais'}
-              </td>
-              <td className="text-center">
-                {card.reviewCount}
-              </td>
+              <td style={{ textAlign: 'center' }}>{card.reviews}</td>
               <td>
                 <div className="actions-cell">
-                  {editingCard?.id === card.id ? (
-                    <>
-                      <button onClick={() => updateCardWithSync(card.id, editingCard)} className="icon-btn" style={{ color: '#10b981' }}>
-                        <Check size={16} />
-                      </button>
-                      <button onClick={() => setEditingCard(null)} className="icon-btn">
-                        <X size={16} />
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <button onClick={() => setEditingCard(card)} className="icon-btn">
-                        <Edit size={16} />
-                      </button>
-                      <button onClick={() => deleteCardWithSync(card.id)} className="icon-btn" style={{ color: '#ef4444' }}>
-                        <Trash2 size={16} />
-                      </button>
-                    </>
-                  )}
+                  <button className="icon-btn-sm" title="Modifier">
+                    <Edit size={14} />
+                  </button>
+                  <button
+                    onClick={() => deleteCardWithSync(card.id)}
+                    className="icon-btn-sm"
+                    style={{ color: '#ef4444' }}
+                    title="Supprimer"
+                  >
+                    <Trash2 size={14} />
+                  </button>
                 </div>
               </td>
             </tr>

@@ -1,0 +1,53 @@
+{
+  "name": "Flash - Flashcards Intelligentes",
+  "short_name": "Flash",
+  "description": "Application de flashcards avec répétition espacée et synchronisation cloud",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0E1116",
+  "theme_color": "#3B82F6",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/PWA.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/pwa-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/pwa-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshot-mobile.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Page d'accueil"
+    }
+  ],
+  "categories": ["education", "productivity"],
+  "shortcuts": [
+    {
+      "name": "Réviser",
+      "short_name": "Réviser",
+      "description": "Commencer une session de révision",
+      "url": "/review/setup",
+      "icons": [{ "src": "/PWA.svg", "sizes": "96x96" }]
+    }
+  ],
+  "prefer_related_applications": false
+}

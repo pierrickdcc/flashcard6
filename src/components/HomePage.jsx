@@ -95,7 +95,7 @@ const HomePage = () => {
         </div>
 
         {/* Pinned Memos */}
-        <div className="pinned-memos-container">
+        <div className="pinned-memos-container home-pinned-memos">
           <h2><Pin size={16} style={{ transform: 'rotate(45deg)' }}/> Mémos Épinglés</h2>
           <div className="pinned-memos-grid">
             {pinnedMemos.length > 0 ? pinnedMemos.map(memo => (

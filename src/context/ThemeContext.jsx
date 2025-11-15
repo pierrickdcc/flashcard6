@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const ThemeContext = createContext();
 
@@ -7,17 +7,13 @@ export const useTheme = () => useContext(ThemeContext);
 export const ThemeProvider = ({ children }) => {
   const [theme, setTheme] = useState(() => {
     const savedTheme = localStorage.getItem('theme');
-    // Use system preference if no theme is saved
-    if (!savedTheme) {
-      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-    }
-    return savedTheme;
+    // Vérifier aussi les préférences système
+    const userPrefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    return savedTheme || (userPrefersDark ? 'dark' : 'light');
   });
 
   useEffect(() => {
-    // On apply theme change, update class on body and save to localStorage
-    document.body.className = '';
-    document.body.classList.add(theme);
+    document.documentElement.className = theme;
     localStorage.setItem('theme', theme);
   }, [theme]);
 

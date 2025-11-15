@@ -1,0 +1,84 @@
+import React, { createContext, useState, useEffect, useContext } from 'react';
+import { useDebouncedCallback } from 'use-debounce';
+import { VIEW_MODE, LOCAL_STORAGE_KEYS } from '../constants/app';
+
+const UIStateContext = createContext();
+
+export const UIStateProvider = ({ children }) => {
+  const [darkMode, setDarkMode] = useState(true);
+  const [showConfigModal, setShowConfigModal] = useState(false);
+  const [showBulkAddModal, setShowBulkAddModal] = useState(false);
+  const [showAddSubjectModal, setShowAddSubjectModal] = useState(false);
+  const [showAddCardModal, setShowAddCardModal] = useState(false);
+  const [showAddCourseModal, setShowAddCourseModal] = useState(false);
+  const [showAddContentModal, setShowAddContentModal] = useState(false);
+  const [reviewMode, setReviewMode] = useState(false);
+  const [reviewCards, setReviewCards] = useState([]);
+  const [isCramMode, setIsCramMode] = useState(false);
+  const [isFreeReview, setIsFreeReview] = useState(false);
+  const [selectedSubjects, setSelectedSubjects] = useState(['all']);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [viewMode, setViewMode] = useState(VIEW_MODE.GRID);
+  const [showSignOutModal, setShowSignOutModal] = useState(false);
+  const [showDeleteSubjectModal, setShowDeleteSubjectModal] = useState(false);
+  const [subjectToDelete, setSubjectToDelete] = useState(null);
+  
+  // MODIFIÉ : Renommage pour plus de clarté
+  const [showMemoModal, setShowMemoModal] = useState(false);
+  const [memoToEdit, setMemoToEdit] = useState(null);
+
+  const debouncedSetSearchTerm = useDebouncedCallback((value) => {
+    setSearchTerm(value);
+  }, 300);
+
+  useEffect(() => {
+    localStorage.setItem(LOCAL_STORAGE_KEYS.THEME, darkMode ? 'dark' : 'light');
+    document.body.className = darkMode ? 'dark' : 'light';
+  }, [darkMode]);
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem(LOCAL_STORAGE_KEYS.THEME);
+    if (savedTheme) {
+      setDarkMode(savedTheme === 'dark');
+    }
+  }, []);
+
+  const value = {
+    darkMode, setDarkMode,
+    showConfigModal, setShowConfigModal,
+    showBulkAddModal, setShowBulkAddModal,
+    showAddSubjectModal, setShowAddSubjectModal,
+    showAddCardModal, setShowAddCardModal,
+    showAddCourseModal, setShowAddCourseModal,
+    showAddContentModal, setShowAddContentModal,
+    reviewMode, setReviewMode,
+    reviewCards, setReviewCards,
+    isCramMode, setIsCramMode,
+    isFreeReview, setIsFreeReview,
+    selectedSubjects, setSelectedSubjects,
+    searchTerm, setSearchTerm,
+    viewMode, setViewMode,
+    debouncedSetSearchTerm,
+    showSignOutModal, setShowSignOutModal,
+    showDeleteSubjectModal, setShowDeleteSubjectModal,
+    subjectToDelete, setSubjectToDelete,
+    
+    // MODIFIÉ : Exposition des nouveaux noms
+    showMemoModal, setShowMemoModal,
+    memoToEdit, setMemoToEdit,
+  };
+
+  return (
+    <UIStateContext.Provider value={value}>
+      {children}
+    </UIStateContext.Provider>
+  );
+};
+
+export const useUIState = () => {
+  const context = useContext(UIStateContext);
+  if (context === undefined) {
+    throw new Error('useUIState must be used within a UIStateProvider');
+  }
+  return context;
+};

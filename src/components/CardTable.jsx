@@ -39,32 +39,72 @@ const CardTable = ({
         <tbody>
           {filteredCards.map((card) => (
             <tr key={card.id}>
-              <td>{card.front}</td>
-              <td>{card.back}</td>
               <td>
-                <span className="subject-badge">
-                  {subjectMap.get(card.subject_id) || 'N/A'}
-                </span>
+                {editingCard?.id === card.id ? (
+                  <input
+                    value={editingCard.question}
+                    onChange={(e) => setEditingCard({ ...editingCard, question: e.target.value })}
+                    className="input"
+                  />
+                ) : (
+                  <span>{card.question}</span>
+                )}
+              </td>
+              <td>
+                {editingCard?.id === card.id ? (
+                  <input
+                    value={editingCard.answer}
+                    onChange={(e) => setEditingCard({ ...editingCard, answer: e.target.value })}
+                    className="input"
+                  />
+                ) : (
+                  <span>{card.answer}</span>
+                )}
+              </td>
+              <td>
+                {editingCard?.id === card.id ? (
+                  <select
+                    value={editingCard.subject_id}
+                    onChange={(e) => setEditingCard({ ...editingCard, subject_id: e.target.value })}
+                    className="select"
+                  >
+                    {(subjects || []).map(s => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <span className="subject-badge">
+                    {subjectMap.get(card.subject_id) || 'N/A'}
+                  </span>
+                )}
               </td>
               <td>
                 {card.next_review_date
                   ? new Date(card.next_review_date).toLocaleDateString('fr-FR')
                   : 'Jamais'}
               </td>
-              <td style={{ textAlign: 'center' }}>{card.reviews}</td>
+              <td style={{ textAlign: 'center' }}>{card.reviewCount}</td>
               <td>
                 <div className="actions-cell">
-                  <button className="icon-btn-sm" title="Modifier">
-                    <Edit size={14} />
-                  </button>
-                  <button
-                    onClick={() => deleteCardWithSync(card.id)}
-                    className="icon-btn-sm"
-                    style={{ color: '#ef4444' }}
-                    title="Supprimer"
-                  >
-                    <Trash2 size={14} />
-                  </button>
+                  {editingCard?.id === card.id ? (
+                    <>
+                      <button onClick={() => updateCardWithSync(card.id, editingCard)} className="icon-btn" style={{ color: '#10b981' }}>
+                        <Check size={16} />
+                      </button>
+                      <button onClick={() => setEditingCard(null)} className="icon-btn">
+                        <X size={16} />
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button onClick={() => setEditingCard(card)} className="icon-btn">
+                        <Edit size={16} />
+                      </button>
+                      <button onClick={() => deleteCardWithSync(card.id)} className="icon-btn" style={{ color: '#ef4444' }}>
+                        <Trash2 size={16} />
+                      </button>
+                    </>
+                  )}
                 </div>
               </td>
             </tr>

@@ -56,22 +56,38 @@ const FlashcardsPage = () => {
       </div>
 
       {/* Toolbar */}
-      <div className="flex justify-between items-center mb-4 p-2 bg-card rounded-lg border border-border">
+      <div className="toolbar">
         <div className="flex items-center gap-4">
-           <select
+          <select
             value={selectedSubject}
             onChange={(e) => setSelectedSubject(e.target.value)}
             className="select"
           >
             <option value="all">Toutes les matières</option>
-            {subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+            {subjects.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
           </select>
         </div>
-        <div className="flex items-center gap-1 p-1 bg-muted rounded-md">
-          <button onClick={() => setViewMode('grid')} className={`icon-btn ${viewMode === 'grid' ? 'bg-background text-primary' : 'text-muted-foreground'}`} aria-label="Afficher en grille">
+        <div className="view-toggle">
+          <button
+            onClick={() => setViewMode('grid')}
+            className={`icon-btn ${
+              viewMode === 'grid' ? 'active' : ''
+            }`}
+            aria-label="Afficher en grille"
+          >
             <LayoutGrid size={20} />
           </button>
-          <button onClick={() => setViewMode('table')} className={`icon-btn ${viewMode === 'table' ? 'bg-background text-primary' : 'text-muted-foreground'}`} aria-label="Afficher en liste">
+          <button
+            onClick={() => setViewMode('table')}
+            className={`icon-btn ${
+              viewMode === 'table' ? 'active' : ''
+            }`}
+            aria-label="Afficher en liste"
+          >
             <List size={20} />
           </button>
         </div>

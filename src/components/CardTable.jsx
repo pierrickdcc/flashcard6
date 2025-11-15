@@ -28,11 +28,12 @@ const CardTable = ({
       <table className="table">
         <thead>
           <tr>
-            {['Question', 'Réponse', 'Matière', 'Prochaine', 'Révisions', 'Actions'].map((header) => (
-              <th key={header}>
-                {header}
-              </th>
-            ))}
+            <th>Question</th>
+            <th>Réponse</th>
+            <th>Matière</th>
+            <th>Prochaine</th>
+            <th>Révisions</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -78,11 +79,11 @@ const CardTable = ({
                 )}
               </td>
               <td>
-                {card.nextReview && !isNaN(new Date(card.nextReview)) ? new Date(card.nextReview).toLocaleDateString('fr-FR') : 'Jamais'}
+                {card.next_review_date
+                  ? new Date(card.next_review_date).toLocaleDateString('fr-FR')
+                  : 'Jamais'}
               </td>
-              <td className="text-center">
-                {card.reviewCount}
-              </td>
+              <td style={{ textAlign: 'center' }}>{card.reviewCount}</td>
               <td>
                 <div className="actions-cell">
                   {editingCard?.id === card.id ? (

@@ -26,38 +26,28 @@ const CoursePage = () => {
           coursesBySubject.map(subject => (
             <div key={subject.id}>
               <h2 className="text-xl font-bold text-primary border-b-2 border-primary inline-block pb-2 mb-4">{subject.name}</h2>
-              <div className="bg-card border border-border rounded-lg overflow-hidden">
-                <table className="w-full">
-                  <thead>
-                    <tr className="bg-[rgba(255,255,255,0.02)]">
-                      <th className="p-3 text-left text-xs font-semibold uppercase text-muted-foreground">Nom</th>
-                      <th className="p-3 text-left text-xs font-semibold uppercase text-muted-foreground">Dernière modification</th>
-                      <th className="p-3 text-center text-xs font-semibold uppercase text-muted-foreground">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {subject.courses.map(course => (
-                      <tr
-                        key={course.id}
-                        onClick={() => navigate(`/courses/${course.id}`)}
-                        className="border-t border-border hover:bg-[rgba(255,255,255,0.03)] cursor-pointer transition-colors"
-                      >
-                        <td className="p-3 flex items-center gap-3 text-sm font-medium">
-                          <FileText size={18} className="text-primary" />
-                          {course.title}
-                        </td>
-                        <td className="p-3 text-sm text-muted-foreground">
-                          {new Date(course.updated_at).toLocaleDateString()}
-                        </td>
-                        <td className="p-3 text-center">
-                           <button className="icon-btn" onClick={(e) => { e.stopPropagation(); /* logic to open dropdown */ }}>
-                              <MoreVertical size={16} />
-                           </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="course-grid">
+                {subject.courses.map(course => (
+                  <div
+                    key={course.id}
+                    className="course-card"
+                    onClick={() => navigate(`/courses/${course.id}`)}
+                  >
+                    <div className="course-card-top">
+                      <FileText size={24} className="text-primary" />
+                      <button className="icon-btn-sm" onClick={(e) => { e.stopPropagation(); /* logic to open dropdown */ }}>
+                        <MoreVertical size={16} />
+                      </button>
+                    </div>
+                    <div className="course-card-content">
+                      <h3 className="font-bold text-heading">{course.title}</h3>
+                    </div>
+                    <div className="course-card-footer">
+                      <span>Dernière modification</span>
+                      <span>{new Date(course.updated_at).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           ))

@@ -44,7 +44,7 @@ const Auth = () => {
       >
         <div className="flex items-center justify-center gap-3 text-2xl font-bold mb-2">
             {/* Remplacement de l'icône SVG inline par le logo */}
-            <div className="logo-svg-container" />
+            <div className="logo-svg-container logo-svg-large" />
             {/* Remplacement du nom de l'appli */}
             <span className="logo-text text-3xl">Flash</span>
         </div>

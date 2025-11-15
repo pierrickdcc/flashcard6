@@ -44,7 +44,7 @@ const ReviewMode = () => {
 
   if (isFinished) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-4 text-center">
+      <div className="review-finished-container">
         <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center gap-4">
           <CheckCircle size={64} className="text-green-500" />
           <h2 className="text-3xl font-bold text-heading">Session terminée !</h2>
@@ -82,7 +82,7 @@ const ReviewMode = () => {
       <header className="review-header">
         <Link to="/" className="logo">
           {/* Remplacement de l'icône par le logo SVG */}
-          <div className="logo-svg-container" />
+          <div className="logo-svg-container logo-svg-large" />
           {/* Remplacement du nom de l'appli */}
           <span className="logo-text">Flash</span>
         </Link>
@@ -113,7 +113,7 @@ const ReviewMode = () => {
           <motion.div
             className="card-flipper"
             animate={{ rotateY: isFlipped ? 180 : 0 }}
-            transition={{ duration: 0.6, ease: 'easeInOut' }}
+            transition={{ duration: 0.4, ease: 'easeInOut' }}
           >
             {/* Front */}
             <div className="card-face card-face-front" onClick={() => !isFlipped && setIsFlipped(true)}>

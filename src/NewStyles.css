@@ -892,6 +892,51 @@ body.dark {
 }
 
 /* --- STYLES TABLES (pour FlashcardsPage) --- */
+.logo-svg-container {
+  width: 28px;
+  height: 28px;
+  background: var(--primary-gradient);
+  mask-image: url(/PWA.svg);
+  mask-size: contain;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.logo-svg-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.4),
+    transparent
+  );
+  transform: skewX(-30deg);
+  animation: shimmer 4s infinite linear;
+}
+
+@keyframes shimmer {
+  0% {
+    left: -100%;
+  }
+  40% {
+    left: 200%;
+  }
+  100% {
+    left: 200%;
+  }
+}
+
+.auth-container .logo-svg-container {
+    width: 32px;
+    height: 32px;
+}
 .table-container {
   background: var(--background-glass);
   border: 1px solid var(--border-color);

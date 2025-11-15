@@ -25,7 +25,7 @@ const CardGrid = ({ filteredCards, setEditingCard, deleteCardWithSync, subjects 
                 {subjectMap.get(card.subject_id) || 'N/A'}
               </span>
               <div className="card-actions">
-                <button className="icon-btn-sm" title="Modifier">
+                <button onClick={() => alert('La modification n\'est possible que depuis la vue en liste.')} className="icon-btn-sm" title="Modifier">
                   <Edit size={14} />
                 </button>
                 <button
@@ -38,8 +38,8 @@ const CardGrid = ({ filteredCards, setEditingCard, deleteCardWithSync, subjects 
                 </button>
               </div>
             </div>
-            <p className="card-content-front">{card.front}</p>
-            <p className="card-content-back">{card.back}</p>
+            <p className="card-content-front">{card.question}</p>
+            <p className="card-content-back">{card.answer}</p>
           </div>
           <div className="card-footer">
             <div className="card-footer-stat">

@@ -1,5 +1,5 @@
 import React, { useMemo, useEffect, useState } from 'react';
-import { Edit, Trash2, Check, X, Inbox } from 'lucide-react';
+import { Edit, Trash2, Check, X, Inbox, ArrowDown, ArrowUp } from 'lucide-react';
 import EmptyState from './EmptyState';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../db';
@@ -15,16 +15,61 @@ const CardTable = ({
   const subjectMap = useMemo(() => new Map(subjects.map(s => [s.id, s.name])), [subjects]);
   const { session } = useAuth();
   const [progressMap, setProgressMap] = useState(new Map());
+  const [sortConfig, setSortConfig] = useState(null);
 
   useEffect(() => {
     const fetchProgress = async () => {
       if (!session?.user?.id) return;
-      const allProgress = await db.user_card_progress.where('user_id').equals(session.user.id).toArray();
-      const map = new Map(allProgress.map(p => [p.card_id, p]));
+      const allProgress = await db.user_card_progress.where('userId').equals(session.user.id).toArray();
+      const map = new Map(allProgress.map(p => [p.cardId, p]));
       setProgressMap(map);
     };
     fetchProgress();
   }, [session, filteredCards]);
+
+  const sortedCards = useMemo(() => {
+    if (!sortConfig) return filteredCards;
+
+    let sortableItems = [...filteredCards];
+    sortableItems.sort((a, b) => {
+        const getSortValue = (item, key) => {
+          if (key === 'subject') return subjectMap.get(item.subject_id) || '';
+          if (key === 'nextReview') {
+            const progress = progressMap.get(item.id);
+            return progress?.dueDate ? new Date(progress.dueDate) : new Date(0);
+          }
+          if (key === 'easeFactor') {
+            const progress = progressMap.get(item.id);
+            return progress?.easeFactor || 2.5;
+          }
+          return item[key] || '';
+        };
+
+        const aValue = getSortValue(a, sortConfig.key);
+        const bValue = getSortValue(b, sortConfig.key);
+
+        if (aValue < bValue) return sortConfig.direction === 'ascending' ? -1 : 1;
+        if (aValue > bValue) return sortConfig.direction === 'ascending' ? 1 : -1;
+        return 0;
+      });
+    }
+    return sortableItems;
+  }, [filteredCards, sortConfig, subjectMap, progressMap]);
+
+  const requestSort = (key) => {
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'ascending') {
+      setSortConfig({ key, direction: 'descending' });
+    } else if (sortConfig && sortConfig.key === key && sortConfig.direction === 'descending') {
+      setSortConfig(null);
+    } else {
+      setSortConfig({ key, direction: 'ascending' });
+    }
+  };
+
+  const getSortIcon = (key) => {
+    if (!sortConfig || sortConfig.key !== key) return null;
+    return sortConfig.direction === 'ascending' ? <ArrowUp size={14} /> : <ArrowDown size={14} />;
+  };
 
   if (filteredCards.length === 0) {
     return (
@@ -36,21 +81,30 @@ const CardTable = ({
     );
   }
 
+  const renderHeader = (label, key) => (
+    <th onClick={() => requestSort(key)}>
+      <div className="th-content">
+        {label}
+        {getSortIcon(key)}
+      </div>
+    </th>
+  );
+
   return (
     <div className="table-container">
       <table className="table">
         <thead>
           <tr>
-            <th>Question</th>
-            <th>Réponse</th>
-            <th>Matière</th>
-            <th>Prochaine</th>
-            <th>Facilité</th>
+            {renderHeader('Question', 'question')}
+            {renderHeader('Réponse', 'answer')}
+            {renderHeader('Matière', 'subject')}
+            {renderHeader('Prochaine', 'nextReview')}
+            {renderHeader('Facilité', 'easeFactor')}
             <th>Actions</th>
           </tr>
         </thead>
         <tbody>
-          {filteredCards.map((card) => {
+          {sortedCards.map((card) => {
             const progress = progressMap.get(card.id);
             const nextReviewDate = progress?.dueDate ? new Date(progress.dueDate) : null;
             const easeFactor = progress?.easeFactor || 2.5;

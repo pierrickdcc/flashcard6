@@ -52,7 +52,6 @@ const CardTable = ({
         if (aValue > bValue) return sortConfig.direction === 'ascending' ? 1 : -1;
         return 0;
       });
-    }
     return sortableItems;
   }, [filteredCards, sortConfig, subjectMap, progressMap]);
 

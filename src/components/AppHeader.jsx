@@ -1,10 +1,10 @@
 import React from 'react';
 import ThemeToggle from './ThemeToggle';
-import ProfileMenu from './ProfileMenu';
 import { Link } from 'react-router-dom';
 import GlobalSearch from './GlobalSearch';
+import { User } from 'lucide-react';
 
-const AppHeader = () => {
+const AppHeader = ({ onProfileClick }) => {
   return (
     <header className="header">
       <div className="header-content">
@@ -17,7 +17,14 @@ const AppHeader = () => {
         </div>
         <div className="header-actions">
           <ThemeToggle />
-          <ProfileMenu />
+          <button
+            className="avatar"
+            onClick={onProfileClick}
+            aria-label="Menu profil"
+            type="button"
+          >
+            <User size={20} />
+          </button>
         </div>
       </div>
     </header>

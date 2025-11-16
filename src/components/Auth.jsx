@@ -7,23 +7,41 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState(null);
   const [message, setMessage] = useState(null);
   const [mode, setMode] = useState('login'); // 'login', 'signup', 'reset'
 
-  const handleLogin = async (e) => {
+  const handleAuthAction = async (e) => {
     e.preventDefault();
+    if (mode === 'signup' && password !== confirmPassword) {
+      setError('Les mots de passe ne correspondent pas.');
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setMessage(null);
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    let error;
+    if (mode === 'login') {
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+      error = signInError;
+    } else {
+      const { error: signUpError } = await supabase.auth.signUp({ email, password });
+      if (signUpError) {
+        console.error('Supabase sign-up error:', signUpError);
+        error = signUpError;
+      } else {
+        // setMessage('Compte créé ! Un email de confirmation vous a été envoyé.');
+        // With email confirmation disabled, Supabase logs the user in automatically.
+        // The onAuthStateChange listener in App.jsx will handle the redirect.
+      }
+    }
 
     if (error) {
-      setError('Email ou mot de passe invalide.');
-    } else {
-      setMessage('Connexion réussie ! Redirection...');
+      setError(error.message);
     }
     setLoading(false);
   };
@@ -78,7 +96,7 @@ const Auth = () => {
           </div>
         </div>
 
-        <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+        <form onSubmit={handleAuthAction} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           <div>
             <label htmlFor="email" className="label" style={{ color: '#334155', fontWeight: '500' }}>Adresse email</label>
             <input
@@ -105,7 +123,7 @@ const Auth = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                autoComplete="current-password"
+                autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
               />
               <button
                 type="button"
@@ -122,7 +140,36 @@ const Auth = () => {
               </button>
             </div>
           </div>
+
+          {mode === 'signup' && (
+            <div>
+              <label htmlFor="confirm-password" className="label" style={{ color: '#334155', fontWeight: '500' }}>Confirmer le mot de passe</label>
+              <div style={{ position: 'relative', marginTop: '0.5rem' }}>
+                <input
+                  id="confirm-password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="••••••••"
+                  className="input"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  autoComplete="new-password"
+                />
+              </div>
+            </div>
+          )}
           
+          {mode === 'login' && (
+            <div style={{ textAlign: 'right', fontSize: '0.875rem', marginTop: '-0.5rem', marginBottom: '-0.5rem' }}>
+              <button
+                type="button"
+                style={{ background: 'none', border: 'none', color: 'var(--primary-color)', cursor: 'pointer', fontWeight: '500' }}
+              >
+                Mot de passe oublié ?
+              </button>
+            </div>
+          )}
+
           {error && (
             <motion.div 
               initial={{ opacity: 0, y: -10 }}
@@ -165,12 +212,18 @@ const Auth = () => {
             style={{ width: '100%', justifyContent: 'center', marginTop: '0.5rem' }}
             disabled={loading}
           >
-            {loading ? 'Connexion en cours...' : 'Se connecter'}
+            {loading ? (mode === 'login' ? 'Connexion...' : 'Inscription...') : (mode === 'login' ? 'Se connecter' : "S'inscrire")}
           </button>
         </form>
         
-        <div style={{ marginTop: '1.5rem', textAlign: 'center', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-          <p>En vous connectant, vous acceptez nos conditions d'utilisation</p>
+        <div style={{ marginTop: '1.5rem', textAlign: 'center', fontSize: '0.875rem' }}>
+          <button
+            type="button"
+            onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}
+            style={{ background: 'none', border: 'none', color: 'var(--primary-color)', cursor: 'pointer', fontWeight: '500' }}
+          >
+            {mode === 'login' ? "Pas encore de compte ? S'inscrire" : "Déjà un compte ? Se connecter"}
+          </button>
         </div>
       </motion.div>
     </div>

@@ -6,6 +6,10 @@ import FloatingActionButton from './FloatingActionButton';
 import StatsBanner from './StatsBanner';
 import SyncIndicator from './SyncIndicator'; // ← NOUVEAU
 import { useUIState } from '../context/UIStateContext';
+import { useAuth } from '../context/AuthContext';
+import { useDataSync } from '../context/DataSyncContext';
+import ProfileSideMenu from './ProfileSideMenu';
+import { useState } from 'react';
 
 // Import all modals
 import AddContentModal from './AddContentModal';
@@ -35,6 +39,15 @@ const MainLayout = ({ children }) => {
     subjectToDelete,
   } = useUIState();
 
+  const [isSideMenuOpen, setIsSideMenuOpen] = useState(false);
+  const { session } = useAuth();
+  const { signOut } = useDataSync();
+
+  const toggleSideMenu = () => {
+    console.log("Toggling side menu from MainLayout");
+    setIsSideMenuOpen(!isSideMenuOpen);
+  };
+
   const location = useLocation();
   const currentPath = location.pathname;
 
@@ -49,9 +62,9 @@ const MainLayout = ({ children }) => {
 
   return (
     <div className="relative min-h-screen bg-background-body">
-      <AppHeader />
+      {location.pathname !== '/login' && <AppHeader onProfileClick={toggleSideMenu} />}
       <StatsBanner />
-      <NavigationBar />
+      <NavigationBar onProfileClick={toggleSideMenu} />
       <main className="pb-20 md:pb-0">
           {children}
       </main>
@@ -81,6 +94,13 @@ const MainLayout = ({ children }) => {
         isOpen={showMemoModal}
         onClose={() => setShowMemoModal(false)}
         memoToEdit={memoToEdit}
+      />
+
+      <ProfileSideMenu
+        isOpen={isSideMenuOpen}
+        onClose={() => setIsSideMenuOpen(false)}
+        userEmail={session?.user?.email}
+        onSignOut={signOut}
       />
     </div>
   );

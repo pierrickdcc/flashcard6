@@ -12,13 +12,13 @@ const AppHeader = ({ onProfileClick }) => {
           <div className="logo-svg-container" />
           <span className="logo-text">Flash</span>
         </Link>
-        <div className="flex-grow flex justify-center">
+        <div className="flex-grow flex justify-center w-full max-w-md">
             <GlobalSearch />
         </div>
         <div className="header-actions">
           <ThemeToggle />
           <button
-            className="avatar"
+            className="avatar header-profile-button hidden md:flex"
             onClick={onProfileClick}
             aria-label="Menu profil"
             type="button"

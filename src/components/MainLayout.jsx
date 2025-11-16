@@ -44,6 +44,7 @@ const MainLayout = ({ children }) => {
   const { signOut } = useDataSync();
 
   const toggleSideMenu = () => {
+    console.log("Toggling side menu from MainLayout");
     setIsSideMenuOpen(!isSideMenuOpen);
   };
 
@@ -61,7 +62,7 @@ const MainLayout = ({ children }) => {
 
   return (
     <div className="relative min-h-screen bg-background-body">
-      <AppHeader onProfileClick={toggleSideMenu} />
+      {location.pathname !== '/login' && <AppHeader onProfileClick={toggleSideMenu} />}
       <StatsBanner />
       <NavigationBar onProfileClick={toggleSideMenu} />
       <main className="pb-20 md:pb-0">

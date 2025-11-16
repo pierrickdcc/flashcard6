@@ -434,6 +434,33 @@ export const DataSyncProvider = ({ children }) => {
     }
   };
 
+  const handleImport = async (jsonString) => {
+    try {
+      const data = JSON.parse(jsonString);
+      let importedCourses = 0;
+      let importedCards = 0;
+
+      if (data.courses && Array.isArray(data.courses)) {
+        await db.courses.bulkPut(data.courses);
+        importedCourses = data.courses.length;
+      }
+
+      if (data.cards && Array.isArray(data.cards)) {
+        await db.cards.bulkPut(data.cards);
+        importedCards = data.cards.length;
+      }
+
+      toast.success(`Importation réussie ! ${importedCourses} cours et ${importedCards} cartes ajoutés/mis à jour.`);
+
+      if (isOnline) {
+        pushLocalChanges();
+      }
+    } catch (error) {
+      toast.error("Erreur lors de l'importation. Le fichier est peut-être invalide.");
+      console.error("Import failed:", error);
+    }
+  };
+
   const syncToCloud = async () => {
     if (isSyncing) return false;
     setIsSyncing(true);
@@ -848,6 +875,7 @@ export const DataSyncProvider = ({ children }) => {
     signOut, 
     getCardsToReview, 
     startReview,
+    handleImport,
   };
 
   return (

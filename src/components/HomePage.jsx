@@ -159,11 +159,6 @@ const HomePage = () => {
             <button 
               onClick={handleStartReview}
               className="home-action-btn"
-              disabled={dueCardsCount === 0}
-              style={{ 
-                opacity: dueCardsCount === 0 ? 0.5 : 1, 
-                cursor: dueCardsCount === 0 ? 'not-allowed' : 'pointer' 
-              }}
             >
               <div className="home-action-icon">
                 <Brain size={18} />

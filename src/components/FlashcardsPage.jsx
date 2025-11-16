@@ -69,7 +69,6 @@ const FlashcardsPage = () => {
         <p>Gérez et révisez vos cartes</p>
       </div>
 
-      {/* Carte de révision avec espacement amélioré */}
       {dueCardsCount > 0 && (
         <div className="glass-card mb-6 p-6 flashcards-review-section">
           <div className="flex items-center justify-between">
@@ -79,18 +78,10 @@ const FlashcardsPage = () => {
                 Vous avez <strong className="text-stat-value-review">{dueCardsCount}</strong> carte{dueCardsCount > 1 ? 's' : ''} à réviser
               </p>
             </div>
-            <button 
-              className="btn btn-primary flex items-center gap-2" 
-              onClick={() => setShowReviewSetup(true)}
-            >
-              <Brain size={18} />
-              <span>Commencer</span>
-            </button>
           </div>
         </div>
       )}
 
-      {/* Toolbar avec espacement amélioré */}
       <div className="toolbar">
         <div className="flex items-center gap-4">
           <select
@@ -105,6 +96,13 @@ const FlashcardsPage = () => {
               </option>
             ))}
           </select>
+          <button
+            className="btn btn-primary flex items-center gap-2"
+            onClick={() => setShowReviewSetup(true)}
+          >
+            <Brain size={18} />
+            <span>Réviser</span>
+          </button>
         </div>
         <div className="view-toggle">
           <button

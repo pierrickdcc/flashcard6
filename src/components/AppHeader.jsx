@@ -2,6 +2,7 @@ import React from 'react';
 import ThemeToggle from './ThemeToggle';
 import ProfileMenu from './ProfileMenu';
 import { Link } from 'react-router-dom';
+import GlobalSearch from './GlobalSearch';
 
 const AppHeader = () => {
   return (
@@ -11,6 +12,9 @@ const AppHeader = () => {
           <div className="logo-svg-container" />
           <span className="logo-text">Flash</span>
         </Link>
+        <div className="flex-grow flex justify-center">
+            <GlobalSearch />
+        </div>
         <div className="header-actions">
           <ThemeToggle />
           <ProfileMenu />

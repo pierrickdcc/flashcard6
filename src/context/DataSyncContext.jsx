@@ -42,15 +42,24 @@ export const DataSyncProvider = ({ children }) => {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
+    const handleFocus = () => {
+      console.log('🔄 Fenêtre active, vérification des mises à jour...');
+      if (isOnline && isConfigured && session) {
+        pullRemoteChanges();
+      }
+    };
+    window.addEventListener('focus', handleFocus);
+
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('focus', handleFocus);
     };
-  }, []);
+  }, [isOnline, isConfigured, session]);
 
   useEffect(() => {
     if (isOnline && isConfigured && session) {
-      console.log('🔄 Lancement de la synchronisation automatique');
+      console.log('🔄 Lancement de la synchronisation initiale');
       syncToCloud();
     }
   }, [isOnline, isConfigured, session]);
@@ -271,303 +280,176 @@ export const DataSyncProvider = ({ children }) => {
     return formatted;
   };
 
-  // =============================================
-  // FONCTION DE SYNCHRONISATION (CORRIGÉE)
-  // =============================================
-  
-  const syncToCloud = async () => {
-    if (!session || !isOnline || !workspaceId || isSyncing) {
-      console.log('⏸️ Synchronisation ignorée:', { session: !!session, isOnline, workspaceId, isSyncing });
-      return false;
+  const pullRemoteChanges = async () => {
+    if (!session || !isOnline || !workspaceId) return;
+
+    console.log('⬇️ Téléchargement des données cloud...');
+    const lastSyncTime = localStorage.getItem(LOCAL_STORAGE_KEYS.LAST_SYNC) || new Date(0).toISOString();
+
+    const [
+      { data: cloudCards, error: cardsError },
+      { data: cloudSubjects, error: subjectsError },
+      { data: cloudCourses, error: coursesError },
+      { data: cloudMemos, error: memosError },
+      { data: cloudProgress, error: progressError }
+    ] = await Promise.all([
+      supabase.from(TABLE_NAMES.CARDS).select('*').eq('workspace_id', workspaceId).gte('updated_at', lastSyncTime),
+      supabase.from(TABLE_NAMES.SUBJECTS).select('*').eq('workspace_id', workspaceId).gte('updated_at', lastSyncTime),
+      supabase.from(TABLE_NAMES.COURSES).select('*').eq('workspace_id', workspaceId).gte('updated_at', lastSyncTime),
+      supabase.from(TABLE_NAMES.MEMOS).select('*').eq('workspace_id', workspaceId).gte('updated_at', lastSyncTime),
+      supabase.from(TABLE_NAMES.USER_CARD_PROGRESS).select('*').eq('user_id', session.user.id).gte('updated_at', lastSyncTime)
+    ]);
+
+    if (cardsError || subjectsError || coursesError || memosError || progressError) {
+      throw cardsError || subjectsError || coursesError || memosError || progressError;
     }
 
+    await db.transaction('rw', db.cards, db.subjects, db.courses, db.memos, db.user_card_progress, async () => {
+      if (cloudSubjects && cloudSubjects.length > 0) await db.subjects.bulkPut(cloudSubjects.map(formatSubjectFromSupabase));
+      if (cloudCards && cloudCards.length > 0) await db.cards.bulkPut(cloudCards.map(formatCardFromSupabase));
+      if (cloudCourses && cloudCourses.length > 0) await db.courses.bulkPut(cloudCourses.map(formatCourseFromSupabase));
+      if (cloudMemos && cloudMemos.length > 0) await db.memos.bulkPut(cloudMemos.map(formatMemoFromSupabase));
+      if (cloudProgress && cloudProgress.length > 0) await db.user_card_progress.bulkPut(cloudProgress.map(formatUserCardProgressFromSupabase));
+    });
+    console.log('✅ Base locale mise à jour avec les données du cloud.');
+  };
+
+  const pushLocalChanges = async () => {
+    if (!session || !isOnline || !workspaceId) return;
+
+    console.log('⬆️ Upload des modifications locales...');
+
+    const pendingDeletions = await db.deletionsPending.toArray();
+    if (pendingDeletions.length > 0) {
+      await Promise.all(pendingDeletions.map(async (deletion) => {
+        if (!String(deletion.id).startsWith('local_')) {
+          await supabase.from(deletion.tableName).delete().eq('id', deletion.id);
+        }
+        await db.deletionsPending.delete(deletion.id);
+      }));
+    }
+
+    let localUnsyncedSubjects = await db.subjects.where('isSynced').equals(0).toArray();
+    if (localUnsyncedSubjects.length > 0) {
+      for (const tempSubject of localUnsyncedSubjects.filter(s => String(s.id).startsWith('local_'))) {
+        const { data } = await supabase.from(TABLE_NAMES.SUBJECTS).insert(formatSubjectForSupabase(tempSubject)).select();
+        if (data) {
+          const serverSubject = data[0];
+          await db.transaction('rw', db.subjects, db.cards, db.courses, async () => {
+            await db.cards.where('subject_id').equals(tempSubject.id).modify({ subject_id: serverSubject.id, isSynced: 0 });
+            await db.courses.where('subject_id').equals(tempSubject.id).modify({ subject_id: serverSubject.id, isSynced: 0 });
+            await db.subjects.delete(tempSubject.id);
+            await db.subjects.put(formatSubjectFromSupabase(serverSubject));
+          });
+        }
+      }
+      const subjectsToUpdate = localUnsyncedSubjects.filter(s => !String(s.id).startsWith('local_'));
+      if (subjectsToUpdate.length > 0) {
+        await supabase.from(TABLE_NAMES.SUBJECTS).upsert(subjectsToUpdate.map(formatSubjectForSupabase), { onConflict: 'id' });
+        await db.subjects.where('id').anyOf(subjectsToUpdate.map(s => s.id)).modify({ isSynced: 1 });
+      }
+    }
+
+    let localUnsyncedCourses = await db.courses.where('isSynced').equals(0).toArray();
+    if (localUnsyncedCourses.length > 0) {
+        // Handle creations
+        for (const tempCourse of localUnsyncedCourses.filter(c => String(c.id).startsWith('local_'))) {
+            const { data } = await supabase.from(TABLE_NAMES.COURSES).insert(formatCourseForSupabase(tempCourse)).select();
+            if (data) {
+                const serverCourse = data[0];
+                await db.transaction('rw', db.courses, db.memos, async () => {
+                    await db.memos.where('course_id').equals(tempCourse.id).modify({ course_id: serverCourse.id, isSynced: 0 });
+                    await db.courses.delete(tempCourse.id);
+                    await db.courses.put(formatCourseFromSupabase(serverCourse));
+                });
+            }
+        }
+        // Handle updates
+        const coursesToUpdate = localUnsyncedCourses.filter(c => !String(c.id).startsWith('local_'));
+        if (coursesToUpdate.length > 0) {
+            await supabase.from(TABLE_NAMES.COURSES).upsert(coursesToUpdate.map(formatCourseForSupabase), { onConflict: 'id' });
+            await db.courses.where('id').anyOf(coursesToUpdate.map(c => c.id)).modify({ isSynced: 1 });
+        }
+    }
+
+    let localUnsyncedCards = await db.cards.where('isSynced').equals(0).toArray();
+    if(localUnsyncedCards.length > 0) {
+        // Handle creations
+        for (const tempCard of localUnsyncedCards.filter(c => String(c.id).startsWith('local_'))) {
+            const { data } = await supabase.from(TABLE_NAMES.CARDS).insert(formatCardForSupabase(tempCard)).select();
+            if (data) {
+                const serverCard = data[0];
+                await db.transaction('rw', db.cards, db.user_card_progress, async () => {
+                    await db.user_card_progress.where('cardId').equals(tempCard.id).modify({ cardId: serverCard.id, isSynced: 0 });
+                    await db.cards.delete(tempCard.id);
+                    await db.cards.put(formatCardFromSupabase(serverCard));
+                });
+            }
+        }
+        // Handle updates
+        const cardsToUpdate = localUnsyncedCards.filter(c => !String(c.id).startsWith('local_'));
+        if (cardsToUpdate.length > 0) {
+            await supabase.from(TABLE_NAMES.CARDS).upsert(cardsToUpdate.map(formatCardForSupabase), { onConflict: 'id' });
+            await db.cards.where('id').anyOf(cardsToUpdate.map(c => c.id)).modify({ isSynced: 1 });
+        }
+    }
+
+    let localUnsyncedMemos = await db.memos.where('isSynced').equals(0).toArray();
+    if (localUnsyncedMemos.length > 0) {
+        // Handle creations
+        for (const tempMemo of localUnsyncedMemos.filter(m => String(m.id).startsWith('local_'))) {
+            const { data } = await supabase.from(TABLE_NAMES.MEMOS).insert(formatMemoForSupabase(tempMemo)).select();
+            if (data) {
+                const serverMemo = data[0];
+                await db.memos.delete(tempMemo.id);
+                await db.memos.put(formatMemoFromSupabase(serverMemo));
+            }
+        }
+        // Handle updates
+        const memosToUpdate = localUnsyncedMemos.filter(m => !String(m.id).startsWith('local_'));
+        if(memosToUpdate.length > 0) {
+            await supabase.from(TABLE_NAMES.MEMOS).upsert(memosToUpdate.map(formatMemoForSupabase), { onConflict: 'id' });
+            await db.memos.where('id').anyOf(memosToUpdate.map(m => m.id)).modify({ isSynced: 1 });
+        }
+    }
+
+    let localUnsyncedProgress = await db.user_card_progress.where('isSynced').equals(0).toArray();
+    if (localUnsyncedProgress.length > 0) {
+        // Handle creations
+        for (const tempProgress of localUnsyncedProgress.filter(p => String(p.id).startsWith('local_'))) {
+            if (String(tempProgress.cardId).startsWith('local_')) continue;
+            const { data } = await supabase.from(TABLE_NAMES.USER_CARD_PROGRESS).insert(formatUserCardProgressForSupabase(tempProgress)).select();
+            if (data) {
+                const serverProgress = data[0];
+                await db.user_card_progress.delete(tempProgress.id);
+                await db.user_card_progress.put(formatUserCardProgressFromSupabase(serverProgress));
+            }
+        }
+        // Handle updates
+        const progressToUpdate = localUnsyncedProgress.filter(p => !String(p.id).startsWith('local_'));
+        if(progressToUpdate.length > 0) {
+            await supabase.from(TABLE_NAMES.USER_CARD_PROGRESS).upsert(progressToUpdate.map(formatUserCardProgressForSupabase), { onConflict: 'id' });
+            await db.user_card_progress.where('id').anyOf(progressToUpdate.map(p => p.id)).modify({ isSynced: 1 });
+        }
+    }
+  };
+
+  const syncToCloud = async () => {
+    if (isSyncing) return false;
     setIsSyncing(true);
-    console.log('🔄 Début de la synchronisation...');
     const toastId = toast.loading('Synchronisation en cours...');
 
     try {
-      const lastSyncTime = localStorage.getItem(LOCAL_STORAGE_KEYS.LAST_SYNC) || new Date(0).toISOString();
-      console.log('📅 Dernière synchronisation:', lastSyncTime);
+      await pullRemoteChanges();
+      await pushLocalChanges();
 
-      // =============================================
-      // 1. TÉLÉCHARGER LES CHANGEMENTS DU CLOUD
-      // =============================================
-      console.log('⬇️ Téléchargement des données cloud...');
-
-      const [
-        { data: cloudCards, error: cardsError },
-        { data: cloudSubjects, error: subjectsError },
-        { data: cloudCourses, error: coursesError },
-        { data: cloudMemos, error: memosError },
-        { data: cloudProgress, error: progressError }
-      ] = await Promise.all([
-        supabase.from(TABLE_NAMES.CARDS).select('*').eq('workspace_id', workspaceId).gte('updated_at', lastSyncTime),
-        supabase.from(TABLE_NAMES.SUBJECTS).select('*').eq('workspace_id', workspaceId).gte('updated_at', lastSyncTime),
-        supabase.from(TABLE_NAMES.COURSES).select('*').eq('workspace_id', workspaceId).gte('updated_at', lastSyncTime),
-        supabase.from(TABLE_NAMES.MEMOS).select('*').eq('workspace_id', workspaceId).gte('updated_at', lastSyncTime),
-        supabase.from(TABLE_NAMES.USER_CARD_PROGRESS).select('*').eq('user_id', session.user.id).gte('updated_at', lastSyncTime)
-      ]);
-
-      if (cardsError || subjectsError || coursesError || memosError || progressError) {
-        throw cardsError || subjectsError || coursesError || memosError || progressError;
-      }
-
-      console.log('📊 Données téléchargées:', {
-        cards: cloudCards?.length || 0,
-        subjects: cloudSubjects?.length || 0,
-        courses: cloudCourses?.length || 0,
-        memos: cloudMemos?.length || 0,
-        progress: cloudProgress?.length || 0
-      });
-
-      // =============================================
-      // 2. METTRE À JOUR LA DB LOCALE (DEXIE)
-      // =============================================
-      console.log('💾 Mise à jour de la base locale...');
-      await db.transaction('rw', db.cards, db.subjects, db.courses, db.memos, db.user_card_progress, async () => {
-        if (cloudSubjects && cloudSubjects.length > 0) {
-          const formattedSubjects = cloudSubjects.map(formatSubjectFromSupabase);
-          await db.subjects.bulkPut(formattedSubjects);
-        }
-        if (cloudCards && cloudCards.length > 0) {
-          const formattedCards = cloudCards.map(formatCardFromSupabase);
-          await db.cards.bulkPut(formattedCards);
-        }
-        if (cloudCourses && cloudCourses.length > 0) {
-          const formattedCourses = cloudCourses.map(formatCourseFromSupabase);
-          await db.courses.bulkPut(formattedCourses);
-        }
-        if (cloudMemos && cloudMemos.length > 0) {
-          const formattedMemos = cloudMemos.map(formatMemoFromSupabase);
-          await db.memos.bulkPut(formattedMemos);
-        }
-        if (cloudProgress && cloudProgress.length > 0) {
-          const formattedProgress = cloudProgress.map(formatUserCardProgressFromSupabase);
-          await db.user_card_progress.bulkPut(formattedProgress);
-        }
-      });
-      console.log('✅ Base locale mise à jour avec les données du cloud.');
-
-
-      // =============================================
-      // 3. ENVOYER LES CHANGEMENTS LOCAUX
-      // =============================================
-      console.log('⬆️ Upload des modifications locales...');
-      
-      // ---------------------------------------------
-      // 3A. GÉRER LES SUPPRESSIONS
-      // ---------------------------------------------
-      const pendingDeletions = await db.deletionsPending.toArray();
-      if (pendingDeletions.length > 0) {
-        console.log('🗑️ Traitement de', pendingDeletions.length, 'suppressions...');
-        await Promise.all(pendingDeletions.map(async (deletion) => {
-          // On ne supprime que les vrais UUID, pas les 'local_' qui n'ont jamais été synchro
-          if (!String(deletion.id).startsWith('local_')) {
-            const { error } = await supabase
-              .from(deletion.tableName)
-              .delete()
-              .eq('id', deletion.id);
-            if (error && error.code !== 'PGRST204') { // PGRST204 = Not Found, c'est OK
-              console.error(`❌ Erreur suppression ${deletion.id}:`, error);
-            }
-          }
-          // Quoi qu'il arrive, on le supprime de la file d'attente locale
-          await db.deletionsPending.delete(deletion.id);
-        }));
-        console.log('✅ Suppressions locales traitées.');
-      }
-
-      // ---------------------------------------------
-      // 3B. GÉRER LES MATIÈRES (SUBJECTS)
-      // ---------------------------------------------
-      let localUnsyncedSubjects = await db.subjects.where('isSynced').equals(0).toArray();
-      if (localUnsyncedSubjects.length > 0) {
-        console.log(`📤 Upload de ${localUnsyncedSubjects.length} matière(s)...`);
-        const subjectsToCreate = localUnsyncedSubjects.filter(s => String(s.id).startsWith('local_'));
-        const subjectsToUpdate = localUnsyncedSubjects.filter(s => !String(s.id).startsWith('local_'));
-
-        // Traiter les créations (une par une pour remapper l'ID)
-        for (const tempSubject of subjectsToCreate) {
-          const formatted = formatSubjectForSupabase(tempSubject);
-          const { data, error } = await supabase
-            .from(TABLE_NAMES.SUBJECTS)
-            .insert(formatted)
-            .select();
-          
-          if (error) throw error;
-          
-          const serverSubject = data[0];
-          if (serverSubject) {
-            await db.transaction('rw', db.subjects, db.cards, db.courses, async () => {
-              // Remapper les cartes et cours qui utilisaient l'ID local
-              await db.cards.where('subject_id').equals(tempSubject.id).modify({ subject_id: serverSubject.id, isSynced: 0 });
-              await db.courses.where('subject_id').equals(tempSubject.id).modify({ subject_id: serverSubject.id, isSynced: 0 });
-              // Supprimer l'ancien et ajouter le nouveau
-              await db.subjects.delete(tempSubject.id);
-              await db.subjects.put(formatSubjectFromSupabase(serverSubject));
-            });
-            console.log(`🔄 Matière remappée: ${tempSubject.id} → ${serverSubject.id}`);
-          }
-        }
-        
-        // Traiter les mises à jour (en masse)
-        if (subjectsToUpdate.length > 0) {
-          const formattedUpdates = subjectsToUpdate.map(formatSubjectForSupabase);
-          const { error } = await supabase.from(TABLE_NAMES.SUBJECTS).upsert(formattedUpdates, { onConflict: 'id' });
-          if (error) throw error;
-          await db.subjects.where('id').anyOf(subjectsToUpdate.map(s => s.id)).modify({ isSynced: 1 });
-        }
-        console.log(`✅ ${localUnsyncedSubjects.length} matière(s) synchronisée(s).`);
-      }
-
-      // ---------------------------------------------
-      // 3C. GÉRER LES COURS (COURSES)
-      // ---------------------------------------------
-      // (On relit au cas où les subject_id ont changé)
-      let localUnsyncedCourses = await db.courses.where('isSynced').equals(0).toArray();
-      if (localUnsyncedCourses.length > 0) {
-        console.log(`📤 Upload de ${localUnsyncedCourses.length} cours...`);
-        const coursesToCreate = localUnsyncedCourses.filter(c => String(c.id).startsWith('local_'));
-        const coursesToUpdate = localUnsyncedCourses.filter(c => !String(c.id).startsWith('local_'));
-
-        for (const tempCourse of coursesToCreate) {
-          const formatted = formatCourseForSupabase(tempCourse);
-          const { data, error } = await supabase.from(TABLE_NAMES.COURSES).insert(formatted).select();
-          if (error) throw error;
-          const serverCourse = data[0];
-          if (serverCourse) {
-            await db.transaction('rw', db.courses, db.memos, async () => {
-              await db.memos.where('course_id').equals(tempCourse.id).modify({ course_id: serverCourse.id, isSynced: 0 });
-              await db.courses.delete(tempCourse.id);
-              await db.courses.put(formatCourseFromSupabase(serverCourse));
-            });
-            console.log(`🔄 Cours remappé: ${tempCourse.id} → ${serverCourse.id}`);
-          }
-        }
-
-        if (coursesToUpdate.length > 0) {
-          const formattedUpdates = coursesToUpdate.map(formatCourseForSupabase);
-          const { error } = await supabase.from(TABLE_NAMES.COURSES).upsert(formattedUpdates, { onConflict: 'id' });
-          if (error) throw error;
-          await db.courses.where('id').anyOf(coursesToUpdate.map(c => c.id)).modify({ isSynced: 1 });
-        }
-        console.log(`✅ ${localUnsyncedCourses.length} cours synchronisé(s).`);
-      }
-
-      // ---------------------------------------------
-      // 3D. GÉRER LES CARTES (CARDS)
-      // ---------------------------------------------
-      // (On relit au cas où les subject_id ont changé)
-      let localUnsyncedCards = await db.cards.where('isSynced').equals(0).toArray();
-      if (localUnsyncedCards.length > 0) {
-        console.log(`📤 Upload de ${localUnsyncedCards.length} carte(s)...`);
-        const cardsToCreate = localUnsyncedCards.filter(c => String(c.id).startsWith('local_'));
-        const cardsToUpdate = localUnsyncedCards.filter(c => !String(c.id).startsWith('local_'));
-        
-        for (const tempCard of cardsToCreate) {
-          const formatted = formatCardForSupabase(tempCard);
-          const { data, error } = await supabase.from(TABLE_NAMES.CARDS).insert(formatted).select();
-          if (error) throw error;
-          const serverCard = data[0];
-          if (serverCard) {
-            await db.transaction('rw', db.cards, db.user_card_progress, async () => {
-              await db.user_card_progress.where('cardId').equals(tempCard.id).modify({ cardId: serverCard.id, isSynced: 0 });
-              await db.cards.delete(tempCard.id);
-              await db.cards.put(formatCardFromSupabase(serverCard));
-            });
-            console.log(`🔄 Carte remappée: ${tempCard.id} → ${serverCard.id}`);
-          }
-        }
-        
-        if (cardsToUpdate.length > 0) {
-          const formattedUpdates = cardsToUpdate.map(formatCardForSupabase);
-          const { error } = await supabase.from(TABLE_NAMES.CARDS).upsert(formattedUpdates, { onConflict: 'id' });
-          if (error) throw error;
-          await db.cards.where('id').anyOf(cardsToUpdate.map(c => c.id)).modify({ isSynced: 1 });
-        }
-        console.log(`✅ ${localUnsyncedCards.length} carte(s) synchronisée(s).`);
-      }
-
-      // ---------------------------------------------
-      // 3E. GÉRER LES MÉMOS (MEMOS)
-      // ---------------------------------------------
-      // (On relit au cas où les course_id ont changé)
-      let localUnsyncedMemos = await db.memos.where('isSynced').equals(0).toArray();
-      if (localUnsyncedMemos.length > 0) {
-        console.log(`📤 Upload de ${localUnsyncedMemos.length} mémo(s)...`);
-        const memosToCreate = localUnsyncedMemos.filter(m => String(m.id).startsWith('local_'));
-        const memosToUpdate = localUnsyncedMemos.filter(m => !String(m.id).startsWith('local_'));
-
-        for (const tempMemo of memosToCreate) {
-          const formatted = formatMemoForSupabase(tempMemo);
-          const { data, error } = await supabase.from(TABLE_NAMES.MEMOS).insert(formatted).select();
-          if (error) throw error;
-          const serverMemo = data[0];
-          if (serverMemo) {
-            await db.memos.delete(tempMemo.id);
-            await db.memos.put(formatMemoFromSupabase(serverMemo));
-            console.log(`🔄 Mémo remappé: ${tempMemo.id} → ${serverMemo.id}`);
-          }
-        }
-
-        if (memosToUpdate.length > 0) {
-          const formattedUpdates = memosToUpdate.map(formatMemoForSupabase);
-          const { error } = await supabase.from(TABLE_NAMES.MEMOS).upsert(formattedUpdates, { onConflict: 'id' });
-          if (error) throw error;
-          await db.memos.where('id').anyOf(memosToUpdate.map(m => m.id)).modify({ isSynced: 1 });
-        }
-        console.log(`✅ ${localUnsyncedMemos.length} mémo(s) synchronisé(s).`);
-      }
-
-      // ---------------------------------------------
-      // 3F. GÉRER LA PROGRESSION (USER_CARD_PROGRESS)
-      // ---------------------------------------------
-      // (On relit au cas où les card_id ont changé)
-      let localUnsyncedProgress = await db.user_card_progress.where('isSynced').equals(0).toArray();
-      if (localUnsyncedProgress.length > 0) {
-        console.log(`📤 Upload de ${localUnsyncedProgress.length} progression(s)...`);
-        const progressToCreate = localUnsyncedProgress.filter(p => String(p.id).startsWith('local_'));
-        const progressToUpdate = localUnsyncedProgress.filter(p => !String(p.id).startsWith('local_'));
-        
-        for (const tempProgress of progressToCreate) {
-          // S'assurer que le cardId n'est pas local
-          if (String(tempProgress.cardId).startsWith('local_')) {
-            console.warn(`⚠️ Progression ${tempProgress.id} ignorée, carte ${tempProgress.cardId} non encore synchro.`);
-            continue;
-          }
-          const formatted = formatUserCardProgressForSupabase(tempProgress);
-          const { data, error } = await supabase.from(TABLE_NAMES.USER_CARD_PROGRESS).insert(formatted).select();
-          if (error) throw error;
-          const serverProgress = data[0];
-          if (serverProgress) {
-            await db.user_card_progress.delete(tempProgress.id);
-            await db.user_card_progress.put(formatUserCardProgressFromSupabase(serverProgress));
-            console.log(`🔄 Progression remappée: ${tempProgress.id} → ${serverProgress.id}`);
-          }
-        }
-        
-        if (progressToUpdate.length > 0) {
-          const formattedUpdates = progressToUpdate.map(formatUserCardProgressForSupabase);
-          const { error } = await supabase.from(TABLE_NAMES.USER_CARD_PROGRESS).upsert(formattedUpdates, { onConflict: 'id' });
-          if (error) throw error;
-          await db.user_card_progress.where('id').anyOf(progressToUpdate.map(p => p.id)).modify({ isSynced: 1 });
-        }
-        console.log(`✅ ${localUnsyncedProgress.length} progression(s) synchronisée(s).`);
-      }
-
-      // =============================================
-      // 4. FINALISATION
-      // =============================================
       const now = new Date();
       setLastSync(now);
       localStorage.setItem(LOCAL_STORAGE_KEYS.LAST_SYNC, now.toISOString());
       
-      console.log('✅ Synchronisation terminée avec succès');
       toast.success('✅ Synchronisation réussie !', { id: toastId });
       return true;
-
     } catch (err) {
-      console.error('❌ Erreur de synchronisation:', err);
       toast.error(`Erreur: ${err.message}`, { id: toastId });
       return false;
     } finally {
@@ -593,13 +475,11 @@ export const DataSyncProvider = ({ children }) => {
       answer_image: card.answer_image || null,
     };
     
-    console.log('➕ Ajout carte locale:', newCard.id);
     await db.cards.add(newCard);
     toast.success('✅ Carte ajoutée !');
     
     if (isOnline) {
-      console.log('🔄 Déclenchement sync après ajout carte');
-      syncToCloud();
+      pushLocalChanges();
     }
   };
 
@@ -612,23 +492,21 @@ export const DataSyncProvider = ({ children }) => {
       answer_image: updates.answer_image || null,
     };
     
-    console.log('✏️ Mise à jour carte:', id);
     await db.cards.update(id, updatedCard);
     toast.success('✅ Carte mise à jour !');
     
     if (isOnline) {
-      syncToCloud();
+      pushLocalChanges();
     }
   };
 
   const deleteCard = async (id) => {
-    console.log('🗑️ Suppression carte:', id);
     await db.cards.delete(id);
     await db.deletionsPending.add({ id, tableName: TABLE_NAMES.CARDS });
     toast.success('✅ Carte supprimée !');
     
     if (isOnline) {
-      syncToCloud();
+      pushLocalChanges();
     }
   };
 
@@ -687,7 +565,7 @@ export const DataSyncProvider = ({ children }) => {
     toast.success(`✅ ${newCards.length} cartes ajoutées !`);
 
     if (isOnline) {
-      syncToCloud();
+      pushLocalChanges();
     }
   };
 
@@ -720,7 +598,7 @@ export const DataSyncProvider = ({ children }) => {
     toast.success('✅ Matière ajoutée !');
 
     if (isOnline) {
-      syncToCloud();
+      pushLocalChanges();
     }
   };
 
@@ -741,7 +619,7 @@ export const DataSyncProvider = ({ children }) => {
     }
 
     toast.success(`Matière "${subjectToDelete.name}" et ses cartes supprimées.`);
-    if (isOnline) syncToCloud();
+    if (isOnline) pushLocalChanges();
   };
 
   const handleReassignCardsOfSubject = async (subjectId) => {
@@ -759,7 +637,7 @@ export const DataSyncProvider = ({ children }) => {
     await db.subjects.delete(subjectId);
 
     toast.success(`Cartes réassignées à "${DEFAULT_SUBJECT}".`);
-    if (isOnline) syncToCloud();
+    if (isOnline) pushLocalChanges();
   };
 
   const reviewCard = async (cardId, rating) => {
@@ -807,7 +685,7 @@ export const DataSyncProvider = ({ children }) => {
     }
 
     if (isOnline) {
-      syncToCloud();
+      pushLocalChanges();
     }
   };
 
@@ -825,7 +703,7 @@ export const DataSyncProvider = ({ children }) => {
     toast.success('✅ Cours ajouté !');
 
     if (isOnline) {
-      syncToCloud();
+      pushLocalChanges();
     }
   };
 
@@ -838,7 +716,7 @@ export const DataSyncProvider = ({ children }) => {
     await db.courses.update(id, updatedCourse);
     toast.success('✅ Cours mis à jour !');
     if (isOnline) {
-      syncToCloud();
+      pushLocalChanges();
     }
   };
 
@@ -854,7 +732,7 @@ export const DataSyncProvider = ({ children }) => {
     await db.memos.add(newMemo);
     toast.success('✅ Mémo ajouté !');
     if (isOnline) {
-      syncToCloud();
+      pushLocalChanges();
     }
   };
 
@@ -867,7 +745,7 @@ export const DataSyncProvider = ({ children }) => {
     await db.memos.update(id, updatedMemo);
     toast.success('✅ Mémo mis à jour !');
     if (isOnline) {
-      syncToCloud();
+      pushLocalChanges();
     }
   };
 
@@ -876,14 +754,14 @@ export const DataSyncProvider = ({ children }) => {
     await db.deletionsPending.add({ id, tableName: TABLE_NAMES.MEMOS });
     toast.success('✅ Mémo supprimé !');
     if (isOnline) {
-      syncToCloud();
+      pushLocalChanges();
     }
   };
 
   const signOut = async () => {
-    const syncSuccessful = await syncToCloud();
+    const syncSuccessful = await pushLocalChanges();
     if (!syncSuccessful) {
-      return;
+      // Decide if you want to block sign out if push fails
     }
     await db.delete();
     await supabase.auth.signOut();

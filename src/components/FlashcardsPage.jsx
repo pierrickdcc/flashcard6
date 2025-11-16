@@ -5,7 +5,7 @@ import CardGrid from './CardGrid';
 import CardTable from './CardTable';
 import Pagination from './Pagination';
 import ReviewSessionSetup from './ReviewSessionSetup';
-import { LayoutGrid, List, Brain } from 'lucide-react';
+import { LayoutGrid, List, Brain, Search } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const CARDS_PER_PAGE = 12;
@@ -15,6 +15,7 @@ const FlashcardsPage = () => {
   const { viewMode, setViewMode } = useUIState();
 
   const [selectedSubject, setSelectedSubject] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [editingCard, setEditingCard] = useState(null);
   const [showReviewSetup, setShowReviewSetup] = useState(false);
@@ -30,15 +31,27 @@ const FlashcardsPage = () => {
 
   const filteredCards = useMemo(() => {
     if (!cards) return [];
-    if (selectedSubject === 'all') {
-      return cards;
+
+    let cardsToFilter = cards;
+
+    if (selectedSubject !== 'all') {
+      cardsToFilter = cardsToFilter.filter(card => card.subject_id === selectedSubject);
     }
-    return cards.filter(card => card.subject_id === selectedSubject);
-  }, [cards, selectedSubject]);
+
+    if (searchQuery.trim() !== '') {
+        const lowercasedQuery = searchQuery.toLowerCase();
+        cardsToFilter = cardsToFilter.filter(card =>
+            (card.question && card.question.toLowerCase().includes(lowercasedQuery)) ||
+            (card.answer && card.answer.toLowerCase().includes(lowercasedQuery))
+        );
+    }
+
+    return cardsToFilter;
+  }, [cards, selectedSubject, searchQuery]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedSubject]);
+  }, [selectedSubject, searchQuery]);
 
   const totalPages = Math.ceil(filteredCards.length / CARDS_PER_PAGE);
   const paginatedCards = filteredCards.slice(
@@ -83,7 +96,17 @@ const FlashcardsPage = () => {
       )}
 
       <div className="toolbar">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 flex-grow">
+          <div className="search-bar" style={{ maxWidth: '300px' }}>
+            <Search size={18} className="search-icon" />
+            <input
+              type="text"
+              placeholder="Rechercher une carte..."
+              className="search-input"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
           <select
             value={selectedSubject}
             onChange={(e) => setSelectedSubject(e.target.value)}

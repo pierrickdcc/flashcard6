@@ -51,8 +51,10 @@ export const AuthProvider = ({ children }) => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       
-      // Lors de la connexion, créer un workspace basé sur l'email
-      if (session && workspaceId.startsWith('workspace_')) {
+      // --- CORRECTION APPLIQUÉE ICI ---
+      // On utilise `savedWorkspace` (correctement capturé par la closure) 
+      // au lieu de `workspaceId` (qui était obsolète et valait '').
+      if (session && savedWorkspace.startsWith('workspace_')) {
         const userWorkspace = session.user.email.split('@')[0];
         setWorkspaceId(userWorkspace);
         console.log('✅ Workspace mis à jour lors de la connexion:', userWorkspace);
@@ -60,7 +62,7 @@ export const AuthProvider = ({ children }) => {
     });
 
     return () => subscription?.unsubscribe();
-  }, []);
+  }, []); // Le tableau de dépendances vide est correct avec ce fix.
 
   const value = {
     session,

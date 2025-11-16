@@ -30,8 +30,10 @@ const ProfileMenu = () => {
   }, [isOpen]);
 
   const handleSignOut = async () => {
+    setIsOpen(false);
+    setIsConfirming(false);
     await signOut();
-  };
+  };;
 
   const toggleMenu = (e) => {
     e.preventDefault();

@@ -10,6 +10,7 @@ const Auth = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState(null);
   const [message, setMessage] = useState(null);
+  const [mode, setMode] = useState('login'); // 'login', 'signup', 'reset'
 
   const handleLogin = async (e) => {
     e.preventDefault();

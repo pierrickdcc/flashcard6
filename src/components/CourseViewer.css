@@ -182,3 +182,13 @@
 }
 .memo-concours strong { color: #b45309; }
 .dark .memo-concours strong { color: #f5e3a7; }
+
+/* Custom Block Styles from the example */
+.definition-cle, .point-danger, .focus-mecanisme, .exemple-clinique, .memo-concours {
+  margin: 1.5em 0;
+  padding: 1rem 1.5rem;
+  border-left-width: 4px;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  font-size: 0.95em;
+}

@@ -62,13 +62,11 @@ const FlashcardsPage = () => {
     }
   };
 
-  return (
+   return (
     <div className="main-content">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold">Flashcards</h1>
-          <p className="text-muted-foreground">Gérez et révisez vos cartes</p>
-        </div>
+      <div className="flashcards-page-header">
+        <h1>Flashcards</h1>
+        <p>Gérez et révisez vos cartes</p>
       </div>
 
       {/* Carte de révision avec espacement amélioré */}

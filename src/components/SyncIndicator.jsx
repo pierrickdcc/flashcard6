@@ -17,14 +17,10 @@ const SyncIndicator = () => {
   };
 
   return (
-    <div style={{ 
-      position: 'fixed', 
-      bottom: '80px', 
-      right: '20px', 
-      zIndex: 100,
+    <div className="sync-indicator" style={{ 
       display: 'flex',
       flexDirection: 'column',
-      alignItems: 'flex-end',
+      alignItems: 'center',
       gap: '0.5rem'
     }}>
       <AnimatePresence>

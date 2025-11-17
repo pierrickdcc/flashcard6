@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useDataSync } from '../context/DataSyncContext';
 import { ArrowLeft, Clock, Tag } from 'lucide-react';
 import DOMPurify from 'dompurify';
-import { marked } from 'marked';
 import './CourseViewer.css';
 
 const CourseViewer = () => {
@@ -38,7 +37,7 @@ const CourseViewer = () => {
     );
   }
 
-  const sanitizedHtml = DOMPurify.sanitize(marked.parse(course.content || ''));
+  const sanitizedHtml = DOMPurify.sanitize(course.content || '');
 
   const formatDate = (dateString) => {
     if (!dateString) return '-';

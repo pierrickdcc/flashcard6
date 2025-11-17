@@ -1,13 +1,37 @@
 import React, { useState, useMemo } from 'react';
 import { useDataSync } from '../context/DataSyncContext';
 import { useNavigate } from 'react-router-dom';
-import { FileText, Clock, BookOpen, Search } from 'lucide-react';
+import { FileText, Clock, BookOpen, Search, MoreVertical, Edit, Trash2 } from 'lucide-react';
 import EmptyState from './EmptyState';
+import DeleteConfirmationModal from './DeleteConfirmationModal';
+import EditCourseModal from './EditCourseModal';
 
 const CoursePage = () => {
-  const { courses, subjects } = useDataSync();
+  const { courses, subjects, updateCourse, deleteCourse } = useDataSync();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
+  const [editingCourse, setEditingCourse] = useState(null);
+  const [deletingCourse, setDeletingCourse] = useState(null);
+
+  const handleEdit = (course) => {
+    setEditingCourse(course);
+  };
+
+  const handleSaveCourse = async (updatedCourse) => {
+    await updateCourse(updatedCourse.id, updatedCourse);
+    setEditingCourse(null);
+  };
+
+  const handleDelete = (course) => {
+    setDeletingCourse(course);
+  };
+
+  const confirmDelete = async () => {
+    if (deletingCourse) {
+      await deleteCourse(deletingCourse.id);
+      setDeletingCourse(null);
+    }
+  };
 
   const coursesBySubject = useMemo(() => {
     if (!courses || !subjects) return [];
@@ -95,13 +119,8 @@ const CoursePage = () => {
             <h2>{subject.name}</h2>
             <div className="course-items">
               {subject.courses.map(course => (
-                <div
-                  key={course.id}
-                  className="course-item"
-                  onClick={() => handleCourseClick(course.id)}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <div className="course-item-main">
+                <div key={course.id} className="course-item">
+                  <div className="course-item-main" onClick={() => handleCourseClick(course.id)} style={{ cursor: 'pointer', flexGrow: 1 }}>
                     <div className="course-item-icon">
                       <FileText size={20} />
                     </div>
@@ -115,12 +134,33 @@ const CoursePage = () => {
                       Modifié {formatDate(course.updated_at)}
                     </span>
                   </div>
+                  <div className="course-item-actions">
+                    <button className="btn-icon" onClick={(e) => { e.stopPropagation(); handleEdit(course); }}>
+                      <Edit size={16} />
+                    </button>
+                    <button className="btn-icon" onClick={(e) => { e.stopPropagation(); handleDelete(course); }}>
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
           </div>
         ))}
       </div>
+
+      <DeleteConfirmationModal
+        itemName={deletingCourse?.title}
+        onConfirm={confirmDelete}
+        onCancel={() => setDeletingCourse(null)}
+      />
+
+      <EditCourseModal
+        course={editingCourse}
+        subjects={subjects}
+        onSave={handleSaveCourse}
+        onCancel={() => setEditingCourse(null)}
+      />
     </div>
   );
 };

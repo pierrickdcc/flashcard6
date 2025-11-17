@@ -37,38 +37,38 @@ const ProfileSideMenu = ({ isOpen, onClose, userEmail, onSignOut }) => {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -10 }}
           transition={{ duration: 0.2 }}
-          className="absolute top-full right-0 mt-2 w-72 bg-background-card shadow-lg rounded-xl border border-border z-50"
+          className="profile-menu"
         >
-          <div className="p-4 border-b border-border">
-            <p className="text-sm text-muted-foreground">Connecté en tant que</p>
-            <p className="font-medium text-text-color truncate">{userEmail}</p>
+          <div className="profile-menu-header">
+            <p className="profile-menu-user-label">Connecté en tant que</p>
+            <p className="profile-menu-user-email" title={userEmail}>{userEmail}</p>
           </div>
 
-          <div className="p-2">
-            <button className="w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md hover:bg-muted-bg transition-colors">
+          <nav className="profile-menu-section">
+            <a href="#" className="profile-menu-item">
               <User size={16} />
               <span>Mon Compte</span>
-            </button>
-            <button className="w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md hover:bg-muted-bg transition-colors">
+            </a>
+            <a href="#" className="profile-menu-item">
               <Settings size={16} />
               <span>Paramètres</span>
-            </button>
-          </div>
+            </a>
+          </nav>
 
-          <div className="p-2 border-t border-border">
+          <div className="profile-menu-section">
             <input type="file" ref={fileInputRef} className="hidden" accept=".json" onChange={handleFileSelected} />
-            <button onClick={() => fileInputRef.current.click()} className="w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md hover:bg-muted-bg transition-colors">
+            <button onClick={() => fileInputRef.current.click()} className="profile-menu-item">
               <Upload size={16} />
               <span>Importer</span>
             </button>
-            <button onClick={handleExport} className="w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md hover:bg-muted-bg transition-colors">
+            <button onClick={handleExport} className="profile-menu-item">
               <Download size={16} />
               <span>Exporter</span>
             </button>
           </div>
 
-          <div className="p-2 border-t border-border">
-            <button onClick={onSignOut} className="w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md text-red-500 hover:bg-red-500 hover:text-white transition-colors">
+          <div className="profile-menu-section">
+            <button onClick={onSignOut} className="profile-menu-item profile-menu-item-logout">
               <LogOut size={16} />
               <span>Se déconnecter</span>
             </button>

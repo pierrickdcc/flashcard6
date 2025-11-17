@@ -283,7 +283,7 @@ const StatsPage = () => {
       <div className="dashboard-grid-stats">
         
         {/* Prévisions */}
-        <div className="glass-card">
+        <div className="glass-card" style={{ minHeight: '300px' }}>
           <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--text-heading-color)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <TrendingUp size={20} />
             Prévisions (7 jours)
@@ -313,7 +313,7 @@ const StatsPage = () => {
         </div>
 
         {/* Activité de Création */}
-        <div className="glass-card">
+        <div className="glass-card" style={{ minHeight: '300px' }}>
           <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--text-heading-color)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <BarChart3 size={20} />
             Activité de Création (30 jours)
@@ -341,7 +341,7 @@ const StatsPage = () => {
         </div>
 
         {/* Répartition */}
-        <div className="glass-card">
+        <div className="glass-card" style={{ minHeight: '300px' }}>
           <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--text-heading-color)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <BookOpen size={20} />
             Répartition par matière
@@ -381,7 +381,7 @@ const StatsPage = () => {
         </div>
 
         {/* Maîtrise par matière */}
-        <div className="glass-card">
+        <div className="glass-card" style={{ minHeight: '300px' }}>
           <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--text-heading-color)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <Target size={20} />
             Maîtrise par matière
@@ -421,7 +421,7 @@ const StatsPage = () => {
         </div>
 
         {/* Maturité des Cartes */}
-        <div className="glass-card">
+        <div className="glass-card" style={{ minHeight: '300px' }}>
             <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--text-heading-color)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <BrainCircuit size={20} />
                 Maturité des Cartes
@@ -485,7 +485,7 @@ const StatsPage = () => {
         </div>
 
         {/* Précision des Réponses */}
-        <div className="glass-card">
+        <div className="glass-card" style={{ minHeight: '300px' }}>
           <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--text-heading-color)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <Target size={20} />
             Précision des Réponses
@@ -504,7 +504,7 @@ const StatsPage = () => {
         </div>
 
         {/* Taux de réussite par matière */}
-        <div className="glass-card" style={{ gridColumn: 'span 2' }}>
+        <div className="glass-card" style={{ gridColumn: 'span 2', minHeight: '300px' }}>
           <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--text-heading-color)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <BarChart3 size={20} />
             Taux de réussite par matière

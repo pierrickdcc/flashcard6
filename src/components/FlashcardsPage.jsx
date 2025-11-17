@@ -83,9 +83,10 @@ const FlashcardsPage = () => {
         </div>
       )}
 
-      <div className="toolbar flex-wrap">
-        <div className="search-bar flex-grow" style={{ minWidth: '200px', maxWidth: '400px' }}>
-          <Search size={18} className="search-icon" />
+      <div className="toolbar">
+         <div className="search-bar md:flex-grow" style={{ minWidth: '200px', maxWidth: '400px' }}>
+           <Search size={18} className="search-icon" />
+         
           <input
             type="text"
             placeholder="Rechercher une carte..."
@@ -116,7 +117,7 @@ const FlashcardsPage = () => {
             <span>Réviser ({dueCardsCount})</span>
           </button>
         </div>
-        <div className="view-toggle ml-auto">
+        <div className="view-toggle md:ml-auto">
           <button
             onClick={() => setViewMode('grid')}
             className={`icon-btn ${

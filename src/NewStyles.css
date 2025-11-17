@@ -408,15 +408,25 @@ body {
 /* Toolbar - AMÉLIORATION : Plus d'espacement */
 .toolbar {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-  padding: 1rem;
-  background: var(--background-card);
-  border-radius: 12px;
-  border: 1px solid var(--border-color);
-  box-shadow: var(--shadow-sm);
-}
+    flex-direction: column; /* Mobile-first: stack items */
+    gap: 1rem; /* Add gap for mobile stacking */
+    align-items: stretch; /* Stretch items to full width */
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: var(--background-card);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-sm);
+  }
+
+  @media (min-width: 768px) {
+    .toolbar {
+      flex-direction: row; /* Desktop: side-by-side */
+      align-items: center;
+      justify-content: space-between;
+      gap: 1.5rem; /* Add gap for desktop */
+    }
+  }
 
 .view-toggle {
   display: flex;
@@ -1697,11 +1707,17 @@ body {
 
 /* Home Page Charts */
 .home-charts-section {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
+ display: grid;
+  grid-template-columns: 1fr; /* Mobile-first: 1 column */
   gap: 1.5rem;
   align-items: stretch;
-}
+ }
+  
+ @media (min-width: 768px) {
+   .home-charts-section {
+      grid-template-columns: 2fr 1fr; /* Desktop: 2fr 1fr */
+     }
+ }
 
 .home-status-card {
     background: var(--background-card);

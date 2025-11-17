@@ -1,11 +1,18 @@
 // src/components/AppHeader.jsx
-import React from 'react';
+import React, { useState } from 'react';
 import ThemeToggle from './ThemeToggle';
 import { Link } from 'react-router-dom';
 import GlobalSearch from './GlobalSearch';
 import { User } from 'lucide-react';
+import ProfileSideMenu from './ProfileSideMenu';
+import { useAuth } from '../context/AuthContext';
+import { useDataSync } from '../context/DataSyncContext';
 
-const AppHeader = ({ onProfileClick }) => {
+const AppHeader = () => {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { session } = useAuth();
+  const { signOut } = useDataSync();
+
   return (
     <header className="header">
       <div className="header-content">
@@ -21,16 +28,21 @@ const AppHeader = ({ onProfileClick }) => {
           <div className="relative">
             <button
               className="avatar header-profile-button hidden md:flex"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                if (onProfileClick) onProfileClick();
-              }}
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
               aria-label="Menu profil"
               type="button"
             >
               <User size={20} />
             </button>
+            <ProfileSideMenu
+              isOpen={isMenuOpen}
+              onClose={() => setIsMenuOpen(false)}
+              userEmail={session?.user?.email}
+              onSignOut={() => {
+                signOut();
+                setIsMenuOpen(false);
+              }}
+            />
           </div>
         </div>
       </div>

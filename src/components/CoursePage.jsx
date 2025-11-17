@@ -57,23 +57,21 @@ const CoursePage = () => {
 
   return (
     <div className="main-content">
-      <div className="page-header-container">
-        <div className="page-header">
-          <h1>Mes Cours</h1>
-          <p>Parcourez et gérez vos pages de cours.</p>
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-2xl font-bold">Mes Cours</h1>
+          <p className="text-muted-foreground">Parcourez et gérez vos pages de cours</p>
         </div>
-        {hasCourses && (
-          <div className="relative">
-            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
-            <input
-              type="text"
-              placeholder="Rechercher un cours..."
-              className="search-input pl-10"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-        )}
+        <div className="search-bar" style={{ maxWidth: '300px' }}>
+          <Search size={18} className="search-icon" />
+          <input
+            type="text"
+            placeholder="Rechercher un cours..."
+            className="search-input"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
       </div>
 
       {!hasCourses ? (

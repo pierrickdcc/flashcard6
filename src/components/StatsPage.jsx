@@ -25,30 +25,35 @@ const StatsPage = () => {
   const reviewHistory = useLiveQuery(() => db.review_history.toArray(), []);
 
   const stats = useMemo(() => {
-    if (!cards || cards.length === 0) {
-      return { totalCards: 0, totalSubjects: subjects.length, dueToday: 0, mastery: 'N/A' };
+    const totalCards = cards?.length || 0;
+    const totalSubjects = subjects?.length || 0;
+
+    if (!userCardProgress || userCardProgress.length === 0) {
+      return { totalCards, totalSubjects, dueToday: totalCards, mastery: '0%' };
     }
 
     const now = new Date();
     const progressMap = new Map(userCardProgress?.map(p => [p.cardId, p]) || []);
 
-    const dueCards = cards.filter(c => {
-      const progress = progressMap.get(c.id);
-      if (!progress || !progress.dueDate) return true; // Considérée due si pas de progrès
-      return new Date(progress.dueDate) <= now;
-    });
+    const progressWithDueDate = userCardProgress.filter(p => p.dueDate);
+    const dueToday = progressWithDueDate.filter(p => new Date(p.dueDate) <= today).length;
 
-    const cardsWithFactor = userCardProgress?.filter(p => p.easeFactor) || [];
-    let masteryPercent = 0;
-    if (cardsWithFactor.length > 0) {
-      const avgEase = cardsWithFactor.reduce((acc, c) => acc + c.easeFactor, 0) / cardsWithFactor.length;
-      masteryPercent = Math.round(((avgEase - 1.3) / (3.0 - 1.3)) * 100);
+    // Cards without progress are considered "due"
+    const cardsWithoutProgress = totalCards - userCardProgress.length;
+    const totalDue = dueToday + cardsWithoutProgress;
+
+    const progressWithFactor = userCardProgress.filter(p => p.easeFactor && p.easeFactor > 0);
+    if (progressWithFactor.length === 0) {
+      return { totalCards, totalSubjects, dueToday: totalDue, mastery: '0%' };
     }
 
+    const avgEase = progressWithFactor.reduce((acc, p) => acc + p.easeFactor, 0) / progressWithFactor.length;
+    const masteryPercent = Math.round(((avgEase - 1.3) / (3.0 - 1.3)) * 100);
+
     return {
-      totalCards: cards.length,
-      totalSubjects: subjects.length,
-      dueToday: dueCards.length,
+      totalCards,
+      totalSubjects,
+      dueToday: totalDue,
       mastery: `${Math.min(100, Math.max(0, masteryPercent))}%`,
     };
   }, [cards, subjects, userCardProgress]);
@@ -79,21 +84,21 @@ const StatsPage = () => {
   }, [cards, courses, memos]);
 
   const cardMasteryData = useMemo(() => {
-    const counts = { "Nouvelles": 0, "En cours": 0, "Acquises": 0 };
-    if (!cards || !userCardProgress) {
-        counts.Nouvelles = cards?.length || 0;
-        return Object.entries(counts).map(([name, value]) => ({ name, value }));
-    }
+    if (!cards || !userCardProgress) return [];
 
+    const statusCounts = { "Nouvelle": 0, "En apprentissage": 0, "Maîtrisée": 0 };
     const progressMap = new Map(userCardProgress.map(p => [p.cardId, p.status]));
     cards.forEach(card => {
-      const status = progressMap.get(card.id);
-      if (status === 'learning' || status === 'relearning') counts["En cours"]++;
-      else if (status === 'review') counts["Acquises"]++;
-      else counts["Nouvelles"]++;
+      const status = progressMap.get(card.id) || 'Nouvelle';
+      if (status in statusCounts) {
+        statusCounts[status]++;
+      } else {
+        // Fallback for any unexpected status values
+        statusCounts['Nouvelle']++;
+      }
     });
 
-    return Object.entries(counts).map(([name, value]) => ({ name, value }));
+    return Object.entries(statusCounts).map(([name, value]) => ({ name, value }));
   }, [cards, userCardProgress]);
 
   const difficultCards = useMemo(() => {
@@ -171,13 +176,25 @@ const StatsPage = () => {
 
   const forecastData = useMemo(() => {
     if (!userCardProgress) return [];
-    const data = Array(7).fill(0).map((_, i) => {
+
+    const progressMap = new Map(userCardProgress.map(p => [p.cardId, p]));
+
+    return Array(7).fill(0).map((_, i) => {
       const date = new Date();
       date.setDate(date.getDate() + i);
       date.setHours(0, 0, 0, 0);
       const day = date.toLocaleDateString('fr-FR', { weekday: 'short' });
-      return { day, cartes: 0, date: date.getTime() };
+
+      const count = userCardProgress.reduce((acc, p) => {
+        if (!p.dueDate) return acc;
+        const reviewDate = new Date(p.dueDate);
+        reviewDate.setHours(0, 0, 0, 0);
+        return reviewDate.getTime() === date.getTime() ? acc + 1 : acc;
+      }, 0);
+
+      return { day, cartes: count };
     });
+  }, [userCardProgress]);
 
     userCardProgress.forEach(p => {
         if (p.dueDate) {
@@ -205,33 +222,36 @@ const StatsPage = () => {
   }, [cards, subjects]);
 
   const masteryBySubject = useMemo(() => {
-    if (!userCardProgress || !cards || !subjects) return [];
+    if (!cards || !subjects || !userCardProgress) return [];
 
-    const cardToSubjectMap = new Map(cards.map(c => [c.id, c.subject_id]));
-    const subjectProgress = {};
+    const progressMap = new Map(userCardProgress.map(p => [p.cardId, p]));
 
-    userCardProgress.forEach(p => {
-      const subjectId = cardToSubjectMap.get(p.cardId);
-      if (subjectId && p.easeFactor) {
-        if (!subjectProgress[subjectId]) {
-          subjectProgress[subjectId] = { totalEase: 0, count: 0 };
-        }
-        subjectProgress[subjectId].totalEase += p.easeFactor;
-        subjectProgress[subjectId].count++;
+    const masteryData = subjects.map(subject => {
+      const subjectCards = cards.filter(c => c.subject_id === subject.id);
+      if (subjectCards.length === 0) {
+        return { name: subject.name, mastery: 0, count: 0 };
       }
-    });
 
-    const subjectNameMap = new Map(subjects.map(s => [s.id, s.name]));
-    return Object.entries(subjectProgress).map(([subjectId, data]) => {
-      const avgEase = data.totalEase / data.count;
+      const subjectProgress = subjectCards
+        .map(c => progressMap.get(c.id))
+        .filter(p => p && p.easeFactor);
+
+      if (subjectProgress.length === 0) {
+        return { name: subject.name, mastery: 0, count: subjectCards.length };
+      }
+
+      const avgEase = subjectProgress.reduce((acc, p) => acc + p.easeFactor, 0) / subjectProgress.length;
       const masteryPercent = Math.round(((avgEase - 1.3) / (3.0 - 1.3)) * 100);
-      return {
-        name: subjectNameMap.get(subjectId) || 'Inconnu',
+
+      return { 
+        name: subject.name, 
         mastery: Math.min(100, Math.max(0, masteryPercent)),
         count: data.count
       };
     }).filter(d => d.count > 0).sort((a, b) => a.mastery - b.mastery);
-  }, [userCardProgress, cards, subjects]);
+
+    return masteryData;
+  }, [cards, subjects, userCardProgress]);
 
   return (
     <div className="stats-page-container">

@@ -62,25 +62,36 @@ const FlashcardsPage = () => {
         <p>Gérez et révisez vos cartes d'apprentissage.</p>
       </div>
 
-      <div className="toolbar-container">
-        <div className="flex-grow flex items-center gap-2">
-          {/* Champ de recherche */}
-          <div className="relative flex-grow md:flex-grow-0">
-            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
-            <input
-              type="text"
-              placeholder="Rechercher une carte..."
-              className="search-input pl-10"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+      {dueCardsCount > 0 && (
+        <div className="glass-card mb-6 p-6 flashcards-review-section">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-text-heading-color mb-1">Cartes à réviser</h3>
+              <p className="text-muted-foreground">
+                Vous avez <strong className="text-stat-value-review">{dueCardsCount}</strong> carte{dueCardsCount > 1 ? 's' : ''} à réviser
+              </p>
+            </div>
           </div>
+        </div>
+      )}
 
-          {/* Sélecteur de matière */}
+      <div className="toolbar flex-wrap">
+        <div className="search-bar flex-grow" style={{ minWidth: '200px', maxWidth: '400px' }}>
+          <Search size={18} className="search-icon" />
+          <input
+            type="text"
+            placeholder="Rechercher une carte..."
+            className="search-input"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
           <select
             value={selectedSubject}
             onChange={(e) => setSelectedSubject(e.target.value)}
             className="select"
+            style={{ minWidth: '180px' }}
           >
             <option value="all">Toutes les matières</option>
             {subjects.map((s) => (
@@ -97,6 +108,26 @@ const FlashcardsPage = () => {
           >
             <Brain size={18} />
             <span>Réviser ({dueCardsCount})</span>
+          </button>
+        </div>
+        <div className="view-toggle ml-auto">
+          <button
+            onClick={() => setViewMode('grid')}
+            className={`icon-btn ${
+              viewMode === 'grid' ? 'active' : ''
+            }`}
+            aria-label="Afficher en grille"
+          >
+            <LayoutGrid size={20} />
+          </button>
+          <button
+            onClick={() => setViewMode('table')}
+            className={`icon-btn ${
+              viewMode === 'table' ? 'active' : ''
+            }`}
+            aria-label="Afficher en liste"
+          >
+            <List size={20} />
           </button>
 
           {/* Bascule de vue */}

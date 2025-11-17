@@ -9,11 +9,9 @@ import SyncIndicator from './SyncIndicator';
 import { useUIState } from '../context/UIStateContext';
 import { useAuth } from '../context/AuthContext';
 import { useDataSync } from '../context/DataSyncContext';
-import { AnimatePresence } from 'framer-motion';
-import toast from 'react-hot-toast';
+import { useState } from 'react';
 
-// Import all modals and menus
-import ProfileSideMenu from './ProfileSideMenu';
+// Import all modals
 import ProfileModal from './ProfileModal';
 import AddContentModal from './AddContentModal';
 import AddSubjectModal from './AddSubjectModal';
@@ -49,7 +47,7 @@ const MainLayout = ({ children }) => {
     showReviewSetupModal, setShowReviewSetupModal,
   } = useUIState();
 
-  const [isProfileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const { session } = useAuth();
   const { signOut, subjects, startReview, cards, courses, handleImport } = useDataSync();
   const isDesktop = useMediaQuery('(min-width: 768px)');
@@ -130,9 +128,7 @@ const MainLayout = ({ children }) => {
     closeProfileMenu();
   };
 
-  const triggerImport = () => {
-    fileInputRef.current.click();
-  };
+  const toggleProfileModal = () => setIsProfileModalOpen(!isProfileModalOpen);
 
   const location = useLocation();
   const currentPath = location.pathname;
@@ -144,29 +140,10 @@ const MainLayout = ({ children }) => {
 
   return (
     <div className="min-h-screen bg-background-body">
-      <input type="file" ref={fileInputRef} className="hidden" accept=".json" onChange={handleFileSelected} />
-
-      {location.pathname !== '/login' && (
-        <>
-          <AppHeader onProfileClick={toggleProfileMenu} />
-          <div ref={profileMenuRef}>
-            <AnimatePresence>
-              {isProfileMenuOpen && isDesktop && (
-                <ProfileSideMenu
-                  userEmail={session?.user?.email}
-                  onSignOut={() => { closeProfileMenu(); signOut(); }}
-                  onImport={triggerImport}
-                  onExport={handleExport}
-                />
-              )}
-            </AnimatePresence>
-          </div>
-        </>
-      )}
+      {location.pathname !== '/login' && <AppHeader />}
 
       <StatsBanner />
-      <NavigationBar onProfileClick={toggleProfileMenu} />
-
+      <NavigationBar onProfileClick={toggleProfileModal} />
       <main className="pb-20 md:pb-0">
           {children}
       </main>
@@ -194,8 +171,24 @@ const MainLayout = ({ children }) => {
       <ConfigModal isOpen={showConfigModal} onClose={() => setShowConfigModal(false)} />
       <DeleteSubjectModal isOpen={showDeleteSubjectModal} onClose={() => setShowDeleteSubjectModal(false)} subjectToDelete={subjectToDelete} />
       <SignOutConfirmationModal isOpen={showSignOutModal} onClose={() => setShowSignOutModal(false)} />
-      <MemoModal isOpen={showMemoModal} onClose={() => setShowMemoModal(false)} memoToEdit={memoToEdit} />
-      <ReviewSessionSetup isOpen={showReviewSetupModal} onClose={() => setShowReviewSetupModal(false)} onStartReview={handleStartReview} subjects={subjects} />
+      
+      <MemoModal
+        isOpen={showMemoModal}
+        onClose={() => setShowMemoModal(false)}
+        memoToEdit={memoToEdit}
+      />
+      <ReviewSessionSetup
+        isOpen={showReviewSetupModal}
+        onClose={() => setShowReviewSetupModal(false)}
+        onStartReview={handleStartReview}
+        subjects={subjects}
+      />
+      <ProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        userEmail={session?.user?.email}
+        onSignOut={signOut}
+      />
     </div>
   );
 };

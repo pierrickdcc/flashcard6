@@ -1614,3 +1614,101 @@ body {
         display: none !important;
     }
 }
+/* ==========================================================================
+   Profile Menu
+   ========================================================================== */
+.profile-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 0.5rem;
+  width: 280px;
+  background-color: var(--background-card);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  border-radius: 0.75rem;
+  border: 1px solid var(--border-color);
+  z-index: 50;
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.profile-menu-header {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 0.25rem;
+}
+
+.profile-menu-user-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  line-height: 1.2;
+}
+
+.profile-menu-user-email {
+  font-weight: 500;
+  color: var(--text-heading-color);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profile-menu-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.25rem;
+}
+
+.profile-menu-section:not(:last-child) {
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.profile-menu-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0.75rem;
+  font-size: 0.875rem;
+  border-radius: 0.5rem;
+  color: var(--text-color);
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+  text-align: left;
+}
+
+.profile-menu-item:hover {
+  background-color: var(--muted-bg);
+  color: var(--text-heading-color);
+}
+
+.profile-menu-item svg {
+  color: var(--text-muted);
+}
+
+.profile-menu-item-logout {
+  color: #EF4444; /* red-500 */
+}
+
+.profile-menu-item-logout:hover {
+  background-color: #EF4444;
+  color: white;
+}
+
+
+
+
+/* ==========================================================================
+   Responsive Fixes
+   ========================================================================== */
+@media (min-width: 768px) {
+  .navigation-bar .nav-link:last-child {
+    display: none;
+  }
+}

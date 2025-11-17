@@ -110,7 +110,7 @@ const HomePage = () => {
         {/* Section principale */}
         <div className="home-top-section">
           {/* Prévisions compactes */}
-          <div className="home-forecast-card" style={{ gridColumn: 'span 2' }}>
+          <div className="home-forecast-card" style={{ gridColumn: 'span 2', minHeight: '300px' }}>
             <h2>Prévisions (7j)</h2>
             {forecast.length > 0 && cards.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">

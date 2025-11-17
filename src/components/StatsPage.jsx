@@ -1,15 +1,28 @@
 import React, { useMemo } from 'react';
 import { useDataSync } from '../context/DataSyncContext';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { db } from '../db';
 import { 
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, 
-  PieChart, Pie, Cell, LineChart, Line, CartesianGrid
+  PieChart, Pie, Cell, LineChart, Line, CartesianGrid, Legend
 } from 'recharts';
-import { TrendingUp, BookOpen, Flame, Target } from 'lucide-react';
+import CalendarHeatmap from 'react-calendar-heatmap';
+import 'react-calendar-heatmap/dist/styles.css';
+import { Tooltip as ReactTooltip } from 'react-tooltip';
+import { TrendingUp, BookOpen, Flame, Target, BrainCircuit, BarChart3, ListTodo } from 'lucide-react';
 
 const COLORS = ['#3B82F6', '#8B5CF6', '#10B981', '#F59E0B', '#EF4444', '#6366F1', '#EC4899', '#14B8A6'];
+const PIE_COLORS = {
+  "Nouvelles": "#3B82F6",
+  "En cours": "#F59E0B",
+  "Acquises": "#10B981",
+};
+
 
 const StatsPage = () => {
-  const { cards = [], subjects = [] } = useDataSync();
+  const { cards = [], subjects = [], courses = [], memos = [] } = useDataSync();
+  const userCardProgress = useLiveQuery(() => db.user_card_progress.toArray(), []);
+  const reviewHistory = useLiveQuery(() => db.review_history.toArray(), []);
 
   const stats = useMemo(() => {
     if (!cards || cards.length === 0) {
@@ -49,6 +62,123 @@ const StatsPage = () => {
       mastery: `${Math.min(100, Math.max(0, masteryPercent))}%`,
     };
   }, [cards, subjects]);
+
+  const creationActivityData = useMemo(() => {
+    const last30Days = Array(30).fill(0).map((_, i) => {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      return date.toISOString().split('T')[0];
+    }).reverse();
+
+    const dataMap = new Map(last30Days.map(day => [day, { day: new Date(day).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }), cartes: 0, cours: 0, memos: 0 }]));
+
+    [...cards, ...courses, ...memos].forEach(item => {
+      const createdAt = new Date(item.created_at || item.createdAt).toISOString().split('T')[0];
+      if (dataMap.has(createdAt)) {
+        const entry = dataMap.get(createdAt);
+        if ('question' in item) entry.cartes += 1;
+        else if ('title' in item) entry.cours += 1;
+        else entry.memos += 1;
+      }
+    });
+
+    return Array.from(dataMap.values());
+  }, [cards, courses, memos]);
+
+  const cardMasteryData = useMemo(() => {
+    if (!userCardProgress) return [];
+
+    const counts = { Nouvelles: 0, "En cours": 0, Acquises: 0 };
+    const totalCards = cards?.length || 0;
+
+    const progressMap = new Map(userCardProgress.map(p => [p.cardId, p.status]));
+
+    cards.forEach(card => {
+      const status = progressMap.get(card.id);
+      if (status === 'learning') counts["En cours"]++;
+      else if (status === 'review') counts["Acquises"]++;
+      else counts["Nouvelles"]++;
+    });
+
+    return Object.entries(counts).map(([name, value]) => ({ name, value }));
+  }, [cards, userCardProgress]);
+
+  const difficultCards = useMemo(() => {
+    if (!userCardProgress || userCardProgress.length === 0) return [];
+
+    const sortedProgress = [...userCardProgress]
+      .filter(p => p.easeFactor)
+      .sort((a, b) => a.easeFactor - b.easeFactor)
+      .slice(0, 10);
+
+    const cardMap = new Map(cards.map(c => [c.id, c]));
+
+    return sortedProgress.map(p => {
+      const card = cardMap.get(p.cardId);
+      return {
+        ...card,
+        easeFactor: p.easeFactor,
+      };
+    }).filter(Boolean);
+  }, [cards, userCardProgress]);
+
+  const activityStreakData = useMemo(() => {
+    if (!reviewHistory) return [];
+    return reviewHistory.reduce((acc, review) => {
+      const date = new Date(review.reviewedAt).toISOString().split('T')[0];
+      const existing = acc.find(item => item.date === date);
+      if (existing) {
+        existing.count++;
+      } else {
+        acc.push({ date, count: 1 });
+      }
+      return acc;
+    }, []);
+  }, [reviewHistory]);
+
+  const answerAccuracyData = useMemo(() => {
+    if (!reviewHistory) return [];
+    const ratings = { 'À revoir': 0, 'Difficile': 0, 'Moyen': 0, 'Facile': 0, 'Très facile': 0 };
+    reviewHistory.forEach(r => {
+      if (r.rating === 1) ratings['À revoir']++;
+      else if (r.rating === 2) ratings['Difficile']++;
+      else if (r.rating === 3) ratings['Moyen']++;
+      else if (r.rating === 4) ratings['Facile']++;
+      else if (r.rating === 5) ratings['Très facile']++;
+    });
+    return Object.entries(ratings).map(([name, value]) => ({ name, value }));
+  }, [reviewHistory]);
+
+  const successRateBySubjectData = useMemo(() => {
+    if (!reviewHistory || !cards || !subjects) return [];
+
+    const cardToSubjectMap = new Map(cards.map(c => [c.id, c.subject_id]));
+    const subjectNameMap = new Map(subjects.map(s => [s.id, s.name]));
+
+    const subjectStats = reviewHistory.reduce((acc, review) => {
+      const subjectId = cardToSubjectMap.get(review.cardId);
+      if (!subjectId) return acc;
+
+      const subjectName = subjectNameMap.get(subjectId) || 'Non classé';
+      if (!acc[subjectName]) {
+        acc[subjectName] = { success: 0, fail: 0 };
+      }
+
+      if (review.rating >= 3) {
+        acc[subjectName].success++;
+      } else {
+        acc[subjectName].fail++;
+      }
+      return acc;
+    }, {});
+
+    return Object.entries(subjectStats).map(([name, { success, fail }]) => ({
+      name,
+      'Réussite': success,
+      'Échec': fail,
+      total: success + fail
+    })).sort((a,b) => (b.Réussite / b.total) - (a.Réussite / a.total));
+  }, [reviewHistory, cards, subjects]);
 
   const forecastData = useMemo(() => {
     if (!cards) return [];
@@ -147,7 +277,7 @@ const StatsPage = () => {
       </div>
 
       {/* Graphiques */}
-      <div className="dashboard-grid">
+      <div className="dashboard-grid-stats">
         
         {/* Prévisions */}
         <div className="glass-card">
@@ -179,40 +309,31 @@ const StatsPage = () => {
           )}
         </div>
 
-        {/* Streak de révisions */}
+        {/* Activité de Création */}
         <div className="glass-card">
           <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--text-heading-color)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Flame size={20} style={{ color: '#f97316' }} />
-            Activité (30 jours)
+            <BarChart3 size={20} />
+            Activité de Création (30 jours)
           </h3>
           <ResponsiveContainer width="100%" height={220}>
-            <LineChart data={streakData} margin={{ top: 5, right: 0, left: -20, bottom: 5 }}>
+            <BarChart data={creationActivityData} margin={{ top: 5, right: 0, left: -20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
-              <XAxis 
-                dataKey="day" 
-                tick={{ fill: 'var(--text-color)', fontSize: 11 }}
-                label={{ value: 'Jours', position: 'insideBottom', offset: -5, fill: 'var(--text-color)' }}
-              />
-              <YAxis 
-                allowDecimals={false} 
-                tick={{ fill: 'var(--text-color)', fontSize: 12 }}
-              />
+              <XAxis dataKey="day" tick={{ fill: 'var(--text-color)', fontSize: 12 }} />
+              <YAxis allowDecimals={false} tick={{ fill: 'var(--text-color)', fontSize: 12 }} />
               <Tooltip
-                contentStyle={{ 
-                  background: 'var(--background-card)', 
-                  border: '1px solid var(--border-color)', 
+                cursor={{ fill: 'rgba(59, 130, 246, 0.1)' }}
+                contentStyle={{
+                  background: 'var(--background-card)',
+                  border: '1px solid var(--border-color)',
                   borderRadius: '8px',
                   fontSize: '0.875rem'
                 }}
               />
-              <Line 
-                type="monotone" 
-                dataKey="reviews" 
-                stroke="#f97316" 
-                strokeWidth={2}
-                dot={{ fill: '#f97316', r: 3 }}
-              />
-            </LineChart>
+              <Legend wrapperStyle={{ fontSize: '0.8rem', paddingTop: '10px' }} />
+              <Bar dataKey="cartes" stackId="a" fill="#3B82F6" name="Cartes" />
+              <Bar dataKey="cours" stackId="a" fill="#8B5CF6" name="Cours" />
+              <Bar dataKey="memos" stackId="a" fill="#10B981" name="Mémos" />
+            </BarChart>
           </ResponsiveContainer>
         </div>
 
@@ -296,9 +417,141 @@ const StatsPage = () => {
           )}
         </div>
 
+        {/* Maturité des Cartes */}
+        <div className="glass-card">
+            <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--text-heading-color)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <BrainCircuit size={20} />
+                Maturité des Cartes
+            </h3>
+            <ResponsiveContainer width="100%" height={220}>
+                <PieChart>
+                    <Pie data={cardMasteryData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5}>
+                        {cardMasteryData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={PIE_COLORS[entry.name]} />
+                        ))}
+                    </Pie>
+                    <Tooltip contentStyle={{ background: 'var(--background-card)', border: '1px solid var(--border-color)', borderRadius: '8px' }} />
+                    <Legend wrapperStyle={{ fontSize: '0.8rem' }} />
+                </PieChart>
+            </ResponsiveContainer>
+        </div>
+
+        {/* Cartes Difficiles */}
+        <div className="glass-card" style={{ gridColumn: 'span 3' }}>
+            <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--text-heading-color)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <ListTodo size={20} />
+                Top 10 Cartes Difficiles
+            </h3>
+            <div style={{ height: 'auto', maxHeight: '220px', overflowY: 'auto' }}>
+                {difficultCards.length > 0 ? (
+                    <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '0.875rem' }}>
+                        {difficultCards.map(card => (
+                            <li key={card.id} style={{ padding: '0.5rem 0', borderBottom: '1px solid var(--border-color)' }}>
+                                <strong style={{ color: 'var(--text-color)' }}>Q:</strong> {card.question}
+                                <br />
+                                <span style={{ color: 'var(--text-muted)' }}>R: {card.answer} (Facilité: {card.easeFactor.toFixed(2)})</span>
+                            </li>
+                        ))}
+                    </ul>
+                ) : (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100px', color: 'var(--text-muted)' }}>
+                        Aucune carte difficile
+                    </div>
+                )}
+            </div>
+        </div>
+
+        {/* Calendrier d'Activité "Streak" */}
+        <div className="glass-card" style={{ gridColumn: 'span 3' }}>
+          <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--text-heading-color)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Flame size={20} />
+            Calendrier d'Activité
+          </h3>
+          <div style={{ height: '180px', overflow: 'hidden' }}>
+            <CalendarHeatmap
+              startDate={new Date(new Date().setFullYear(new Date().getFullYear() - 1))}
+              endDate={new Date()}
+              values={activityStreakData}
+              classForValue={(value) => {
+                if (!value) return 'color-empty';
+                return `color-scale-${Math.min(4, value.count)}`;
+              }}
+              tooltipDataAttrs={value => ({ 'data-tooltip-id': 'heatmap-tooltip', 'data-tooltip-content': `${value.date}: ${value.count} révisions` })}
+            />
+          </div>
+        </div>
+
+        {/* Précision des Réponses */}
+        <div className="glass-card">
+          <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--text-heading-color)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Target size={20} />
+            Précision des Réponses
+          </h3>
+          <ResponsiveContainer width="100%" height={220}>
+            <PieChart>
+              <Pie data={answerAccuracyData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80}>
+                {answerAccuracyData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip contentStyle={{ background: 'var(--background-card)', border: '1px solid var(--border-color)', borderRadius: '8px' }} />
+              <Legend wrapperStyle={{ fontSize: '0.8rem' }} />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Taux de réussite par matière */}
+        <div className="glass-card" style={{ gridColumn: 'span 2' }}>
+          <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--text-heading-color)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <BarChart3 size={20} />
+            Taux de réussite par matière
+          </h3>
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={successRateBySubjectData} layout="vertical" margin={{ top: 5, right: 20, left: 5, bottom: 5 }}>
+              <XAxis type="number" domain={[0, 100]} tick={{ fill: 'var(--text-color)', fontSize: 12 }} />
+              <YAxis type="category" dataKey="name" tick={{ fill: 'var(--text-color)', fontSize: 11 }} width={100} />
+              <Tooltip
+                contentStyle={{ background: 'var(--background-card)', border: '1px solid var(--border-color)', borderRadius: '8px' }}
+                formatter={(value, name, props) => {
+                  const { payload } = props;
+                  const total = payload.Réussite + payload.Échec;
+                  const percentage = total > 0 ? ((value / total) * 100).toFixed(0) : 0;
+                  return `${value} (${percentage}%)`;
+                }}
+              />
+              <Legend wrapperStyle={{ fontSize: '0.8rem' }}/>
+              <Bar dataKey="Réussite" stackId="a" fill="#10B981" />
+              <Bar dataKey="Échec" stackId="a" fill="#EF4444" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
       </div>
     </div>
   );
 };
 
-export default StatsPage;
+const heatmapStyles = `
+.react-calendar-heatmap .color-empty { fill: rgba(255, 255, 255, 0.05); }
+.react-calendar-heatmap .color-scale-1 { fill: #10B981; }
+.react-calendar-heatmap .color-scale-2 { fill: #34D399; }
+.react-calendar-heatmap .color-scale-3 { fill: #6EE7B7; }
+.react-calendar-heatmap .color-scale-4 { fill: #A7F3D0; }
+.react-calendar-heatmap .color-scale-5 { fill: #D1FAE5; }
+.react-tooltip {
+  background-color: var(--background-card) !important;
+  color: var(--text-color) !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 8px !important;
+  font-size: 0.875rem !important;
+}
+`;
+
+const StatsPageWrapper = () => (
+  <>
+    <style>{heatmapStyles}</style>
+    <StatsPage />
+    <ReactTooltip id="heatmap-tooltip" />
+  </>
+);
+
+export default StatsPageWrapper;

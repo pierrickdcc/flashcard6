@@ -280,6 +280,30 @@ export const DataSyncProvider = ({ children }) => {
     return formatted;
   };
 
+  const formatReviewHistoryFromSupabase = (review) => ({
+    id: review.id,
+    userId: review.user_id,
+    cardId: review.card_id,
+    rating: review.rating,
+    reviewedAt: review.reviewed_at,
+    isSynced: 1,
+  });
+
+  const formatReviewHistoryForSupabase = (review) => {
+    const formatted = {
+      user_id: session.user.id,
+      card_id: review.cardId,
+      rating: review.rating,
+      reviewed_at: review.reviewedAt,
+    };
+
+    if (!String(review.id).startsWith('local_')) {
+      formatted.id = review.id;
+    }
+
+    return formatted;
+  };
+
   const pullRemoteChanges = async () => {
     if (!session || !isOnline || !workspaceId) return;
 
@@ -291,25 +315,28 @@ export const DataSyncProvider = ({ children }) => {
       { data: cloudSubjects, error: subjectsError },
       { data: cloudCourses, error: coursesError },
       { data: cloudMemos, error: memosError },
-      { data: cloudProgress, error: progressError }
+      { data: cloudProgress, error: progressError },
+      { data: cloudReviewHistory, error: reviewHistoryError }
     ] = await Promise.all([
       supabase.from(TABLE_NAMES.CARDS).select('*').eq('workspace_id', workspaceId).gte('updated_at', lastSyncTime),
       supabase.from(TABLE_NAMES.SUBJECTS).select('*').eq('workspace_id', workspaceId).gte('updated_at', lastSyncTime),
       supabase.from(TABLE_NAMES.COURSES).select('*').eq('workspace_id', workspaceId).gte('updated_at', lastSyncTime),
       supabase.from(TABLE_NAMES.MEMOS).select('*').eq('workspace_id', workspaceId).gte('updated_at', lastSyncTime),
-      supabase.from(TABLE_NAMES.USER_CARD_PROGRESS).select('*').eq('user_id', session.user.id).gte('updated_at', lastSyncTime)
+      supabase.from(TABLE_NAMES.USER_CARD_PROGRESS).select('*').eq('user_id', session.user.id).gte('updated_at', lastSyncTime),
+      supabase.from(TABLE_NAMES.REVIEW_HISTORY).select('*').eq('user_id', session.user.id).gte('reviewed_at', lastSyncTime)
     ]);
 
-    if (cardsError || subjectsError || coursesError || memosError || progressError) {
-      throw cardsError || subjectsError || coursesError || memosError || progressError;
+    if (cardsError || subjectsError || coursesError || memosError || progressError || reviewHistoryError) {
+      throw cardsError || subjectsError || coursesError || memosError || progressError || reviewHistoryError;
     }
 
-    await db.transaction('rw', db.cards, db.subjects, db.courses, db.memos, db.user_card_progress, async () => {
+    await db.transaction('rw', db.cards, db.subjects, db.courses, db.memos, db.user_card_progress, db.review_history, async () => {
       if (cloudSubjects && cloudSubjects.length > 0) await db.subjects.bulkPut(cloudSubjects.map(formatSubjectFromSupabase));
       if (cloudCards && cloudCards.length > 0) await db.cards.bulkPut(cloudCards.map(formatCardFromSupabase));
       if (cloudCourses && cloudCourses.length > 0) await db.courses.bulkPut(cloudCourses.map(formatCourseFromSupabase));
       if (cloudMemos && cloudMemos.length > 0) await db.memos.bulkPut(cloudMemos.map(formatMemoFromSupabase));
       if (cloudProgress && cloudProgress.length > 0) await db.user_card_progress.bulkPut(cloudProgress.map(formatUserCardProgressFromSupabase));
+      if (cloudReviewHistory && cloudReviewHistory.length > 0) await db.review_history.bulkPut(cloudReviewHistory.map(formatReviewHistoryFromSupabase));
     });
     console.log('✅ Base locale mise à jour avec les données du cloud.');
   };
@@ -432,6 +459,25 @@ export const DataSyncProvider = ({ children }) => {
             await db.user_card_progress.where('id').anyOf(progressToUpdate.map(p => p.id)).modify({ isSynced: 1 });
         }
     }
+
+    let localUnsyncedReviewHistory = await db.review_history.where('isSynced').equals(0).toArray();
+    if (localUnsyncedReviewHistory.length > 0) {
+        for (const tempReview of localUnsyncedReviewHistory.filter(r => String(r.id).startsWith('local_'))) {
+            if (String(tempReview.cardId).startsWith('local_')) continue;
+            const { data } = await supabase.from(TABLE_NAMES.REVIEW_HISTORY).insert(formatReviewHistoryForSupabase(tempReview)).select();
+            if (data) {
+                const serverReview = data[0];
+                await db.review_history.delete(tempReview.id);
+                await db.review_history.put(formatReviewHistoryFromSupabase(serverReview));
+            }
+        }
+
+        const historyToUpdate = localUnsyncedReviewHistory.filter(r => !String(r.id).startsWith('local_'));
+        if(historyToUpdate.length > 0) {
+             await supabase.from(TABLE_NAMES.REVIEW_HISTORY).upsert(historyToUpdate.map(formatReviewHistoryForSupabase), { onConflict: 'id' });
+             await db.review_history.where('id').anyOf(historyToUpdate.map(r => r.id)).modify({ isSynced: 1 });
+        }
+    }
   };
 
   const handleImport = async (jsonString) => {
@@ -508,6 +554,15 @@ export const DataSyncProvider = ({ children }) => {
     if (isOnline) {
       pushLocalChanges();
     }
+
+    await db.review_history.add({
+      id: `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      userId: userId,
+      cardId: cardId,
+      rating: rating,
+      reviewedAt: new Date().toISOString(),
+      isSynced: 0,
+    });
   };
 
   const updateCard = async (id, updates) => {

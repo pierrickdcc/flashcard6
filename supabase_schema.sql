@@ -187,3 +187,40 @@ CREATE POLICY "Les utilisateurs peuvent mettre à jour leurs propres mémos" ON 
 
 CREATE POLICY "Les utilisateurs peuvent supprimer leurs propres mémos" ON public.memos
     FOR DELETE USING (auth.uid() = user_id);
+
+
+-- =============================================
+-- Table: review_history
+-- Description: Enregistre chaque événement de révision d'une carte.
+-- =============================================
+CREATE TABLE public.review_history (
+    id uuid NOT NULL DEFAULT gen_random_uuid(),
+    user_id uuid NOT NULL,
+    card_id uuid NOT NULL,
+    rating smallint NOT NULL, -- 1: À revoir, 2: Difficile, 3: Moyen, 4: Facile, 5: Très facile
+    reviewed_at timestamp with time zone NOT NULL DEFAULT now(),
+    CONSTRAINT review_history_pkey PRIMARY KEY (id),
+    CONSTRAINT review_history_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE,
+    CONSTRAINT review_history_card_id_fkey FOREIGN KEY (card_id) REFERENCES public.cards(id) ON DELETE CASCADE,
+    CONSTRAINT review_history_rating_check CHECK (rating >= 1 AND rating <= 5)
+);
+
+-- Index pour accélérer les analyses de l'historique
+CREATE INDEX idx_review_history_user_id_reviewed_at ON public.review_history USING btree (user_id, reviewed_at);
+CREATE INDEX idx_review_history_user_id_card_id ON public.review_history USING btree (user_id, card_id);
+
+
+-- Activer RLS pour la nouvelle table
+ALTER TABLE public.review_history ENABLE ROW LEVEL SECURITY;
+
+-- Politiques pour la table "review_history"
+CREATE POLICY "Les utilisateurs peuvent voir leur propre historique de révision" ON public.review_history
+    FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Les utilisateurs peuvent insérer leur propre historique de révision" ON public.review_history
+    FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Les utilisateurs ne peuvent pas modifier ou supprimer l'historique" ON public.review_history
+    FOR UPDATE USING (false);
+CREATE POLICY "Les utilisateurs ne peuvent pas modifier ou supprimer l'historique 2" ON public.review_history
+    FOR DELETE USING (false);

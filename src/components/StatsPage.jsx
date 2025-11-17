@@ -369,9 +369,7 @@ const StatsPage = () => {
                   nameKey="name" 
                   cx="50%" 
                   cy="50%" 
-                  outerRadius={80}
-                  label={(entry) => `${entry.name} (${entry.value})`}
-                  labelLine={false}
+                  outerRadius="90%"
                 >
                   {cardsBySubject.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -385,6 +383,7 @@ const StatsPage = () => {
                     fontSize: '0.875rem'
                   }}
                 />
+                <Legend wrapperStyle={{ fontSize: '0.8rem' }} />
               </PieChart>
             </ResponsiveContainer>
           ) : (
@@ -442,7 +441,7 @@ const StatsPage = () => {
             </h3>
             <ResponsiveContainer width="100%" height={220}>
                 <PieChart>
-                    <Pie data={cardMasteryData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5}>
+                    <Pie data={cardMasteryData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius="70%" outerRadius="90%" paddingAngle={5}>
                         {cardMasteryData.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={PIE_COLORS[entry.name]} />
                         ))}
@@ -506,7 +505,7 @@ const StatsPage = () => {
           </h3>
           <ResponsiveContainer width="100%" height={220}>
             <PieChart>
-              <Pie data={answerAccuracyData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80}>
+              <Pie data={answerAccuracyData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius="90%">
                 {answerAccuracyData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}

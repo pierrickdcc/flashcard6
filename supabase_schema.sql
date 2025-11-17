@@ -5,7 +5,7 @@
 CREATE TABLE public.subjects (
     id uuid NOT NULL DEFAULT gen_random_uuid(),
     user_id uuid NOT NULL,
-    workspace_id uuid NOT NULL,
+    workspace_id text NOT NULL,
     name text NOT NULL,
     created_at timestamp with time zone NOT NULL DEFAULT now(),
     updated_at timestamp with time zone NOT NULL DEFAULT now(),
@@ -25,7 +25,7 @@ CREATE INDEX idx_subjects_workspace_id ON public.subjects USING btree (workspace
 CREATE TABLE public.courses (
     id uuid NOT NULL DEFAULT gen_random_uuid(),
     user_id uuid NOT NULL,
-    workspace_id uuid NOT NULL,
+    workspace_id text NOT NULL,
     title text NOT NULL,
     content text,
     subject_id uuid, -- Modifié de 'subject text'
@@ -48,7 +48,7 @@ CREATE INDEX idx_courses_subject_id ON public.courses USING btree (subject_id); 
 CREATE TABLE public.cards (
     id uuid NOT NULL DEFAULT gen_random_uuid(),
     user_id uuid NOT NULL,
-    workspace_id uuid NOT NULL,
+    workspace_id text NOT NULL,
     question text NOT NULL,
     answer text NOT NULL,
     subject_id uuid, -- Modifié de 'subject text'
@@ -97,7 +97,7 @@ CREATE INDEX idx_user_card_progress_user_id_next_review ON public.user_card_prog
 CREATE TABLE public.memos (
     id uuid NOT NULL DEFAULT gen_random_uuid(),
     user_id uuid NOT NULL,
-    workspace_id uuid NOT NULL,
+    workspace_id text NOT NULL,
     content text,
     color text NOT NULL DEFAULT 'yellow',
     course_id uuid,

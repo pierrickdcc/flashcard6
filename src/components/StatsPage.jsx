@@ -460,15 +460,15 @@ const StatsPage = () => {
             </h3>
             <div style={{ height: 'auto', maxHeight: '220px', overflowY: 'auto' }}>
                 {difficultCards.length > 0 ? (
-                    <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '0.875rem' }}>
-                        {difficultCards.map(card => (
-                            <li key={card.id} style={{ padding: '0.5rem 0', borderBottom: '1px solid var(--border-color)' }}>
-                                <strong style={{ color: 'var(--text-color)' }}>Q:</strong> {card.question}
-                                <br />
-                                <span style={{ color: 'var(--text-muted)' }}>R: {card.answer} (Facilité: {card.easeFactor.toFixed(2)})</span>
-                            </li>
-                        ))}
-                    </ul>
+<ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '0.875rem' }}>
+  {difficultCards.map(card => (
+    <li key={card.id} style={{ padding: '0.5rem 0', borderBottom: '1px solid var(--border-color)' }}>
+      <strong style={{ color: 'var(--text-color)' }}>Q:</strong> {card.question}
+      <br />
+      <span style={{ color: 'var(--text-muted)' }}>R: {card.answer} (Facilité: {card.easeFactor.toFixed(2)})</span>
+    </li>
+  ))}
+</ul>
                 ) : (
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100px', color: 'var(--text-muted)' }}>
                         Aucune carte difficile

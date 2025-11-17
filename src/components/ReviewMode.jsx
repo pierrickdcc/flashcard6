@@ -131,8 +131,8 @@ const ReviewMode = () => {
             {/* Front */}
             <div className="card-face card-face-front">
               <span className="card-subject-tag">{subjectMap.get(currentCard.subject_id) || 'Sujet'}</span>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', width: '100%' }}>
-                <p className="card-content" style={{ fontSize: currentCard.question_image ? '1.5rem' : '2.25rem' }}>
+              <div>
+                <p className="card-content">
                   {currentCard.question}
                 </p>
                 {currentCard.question_image && (
@@ -154,8 +154,8 @@ const ReviewMode = () => {
             {/* Back */}
             <div className="card-face card-face-back">
               <span className="card-subject-tag">{subjectMap.get(currentCard.subject_id) || 'Sujet'}</span>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', width: '100%' }}>
-                <p className="card-content" style={{ fontSize: currentCard.answer_image ? '1.25rem' : '1.5rem' }}>
+              <div>
+                <p className="card-content">
                   {currentCard.answer}
                 </p>
                 {currentCard.answer_image && (

@@ -856,6 +856,21 @@ const pushLocalChanges = async () => {
     }
   };
 
+  const deleteCourse = async (id) => {
+    // Dissocier les cartes liées
+    await db.cards.where('course_id').equals(id).modify({ course_id: null, isSynced: 0 });
+
+    // Supprimer le cours
+    await db.courses.delete(id);
+    await db.deletionsPending.add({ id, tableName: TABLE_NAMES.COURSES });
+
+    toast.success('✅ Cours supprimé !');
+
+    if (isOnline) {
+      pushLocalChanges();
+    }
+  };
+
   const addMemo = async (memo) => {
     const newMemo = {
       ...memo,
@@ -978,6 +993,7 @@ const pushLocalChanges = async () => {
     reviewCard, 
     addCourse, 
     updateCourse,
+    deleteCourse,
     addMemo, 
     updateMemoWithSync, 
     deleteMemoWithSync,

@@ -27,8 +27,14 @@ const CoursePage = () => {
   };
 
   const confirmDelete = async () => {
-    if (deletingCourse) {
+    if (!deletingCourse) return;
+
+    try {
       await deleteCourse(deletingCourse.id);
+    } catch (error) {
+      console.error("Failed to delete course:", error);
+      // Optionnel : Affichez un toast d'erreur ici
+    } finally {
       setDeletingCourse(null);
     }
   };
@@ -135,10 +141,10 @@ const CoursePage = () => {
                     </span>
                   </div>
                   <div className="course-item-actions">
-                    <button className="btn-icon" onClick={(e) => { e.stopPropagation(); handleEdit(course); }}>
+                    <button className="btn-icon" aria-label={`Modifier le cours ${course.title}`} onClick={(e) => { e.stopPropagation(); handleEdit(course); }}>
                       <Edit size={16} />
                     </button>
-                    <button className="btn-icon" onClick={(e) => { e.stopPropagation(); handleDelete(course); }}>
+                    <button className="btn-icon" aria-label={`Supprimer le cours ${course.title}`} onClick={(e) => { e.stopPropagation(); handleDelete(course); }}>
                       <Trash2 size={16} />
                     </button>
                   </div>

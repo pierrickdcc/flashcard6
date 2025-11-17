@@ -4,7 +4,7 @@ const DeleteConfirmationModal = ({ itemType, itemName, onConfirm, onCancel }) =>
   if (!itemName) return null;
 
   return (
-    <div className="modal-backdrop">
+    <div className="modal-backdrop" data-testid="delete-confirmation-modal">
       <div className="modal-content">
         <h2 className="text-xl font-bold mb-4">Confirmer la suppression</h2>
         <p>

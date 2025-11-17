@@ -28,7 +28,7 @@ const NavigationBar = ({ onProfileClick }) => {
             console.log("Profile button clicked in navigation");
             if (onProfileClick) onProfileClick();
           }} 
-          className="nav-link"
+          className="nav-link md:hidden"
           type="button"
           style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
         >

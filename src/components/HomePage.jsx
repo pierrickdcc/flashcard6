@@ -8,7 +8,7 @@ import { Brain, Pin, Plus, BookOpen, Layers, Library } from 'lucide-react';
 
 const HomePage = () => {
   const { cards, memos, subjects, getCardsToReview } = useDataSync();
-  const { setShowAddContentModal, setMemoToEdit, setShowMemoModal } = useUIState();
+  const { setShowAddContentModal, setMemoToEdit, setShowMemoModal, setShowReviewSetupModal } = useUIState();
   const navigate = useNavigate();
   const [dueCardsCount, setDueCardsCount] = useState(0);
 
@@ -56,8 +56,7 @@ const HomePage = () => {
   }, [cards, memos, subjects]);
 
   const handleStartReview = () => {
-    // Toujours permettre de lancer une révision
-    navigate('/review/setup');
+    setShowReviewSetupModal(true);
   };
 
   const handleMemoClick = (memo) => {

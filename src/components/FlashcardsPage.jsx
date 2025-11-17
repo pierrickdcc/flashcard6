@@ -11,14 +11,13 @@ import toast from 'react-hot-toast';
 const CARDS_PER_PAGE = 12;
 
 const FlashcardsPage = () => {
-  const { cards, subjects = [], updateCard, deleteCard, getCardsToReview, startReview } = useDataSync();
-  const { viewMode, setViewMode } = useUIState();
+  const { cards, subjects = [], updateCard, deleteCard, getCardsToReview } = useDataSync();
+  const { viewMode, setViewMode, showReviewSetupModal, setShowReviewSetupModal } = useUIState();
 
   const [selectedSubject, setSelectedSubject] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [editingCard, setEditingCard] = useState(null);
-  const [showReviewSetup, setShowReviewSetup] = useState(false);
   const [dueCardsCount, setDueCardsCount] = useState(0);
 
   useEffect(() => {
@@ -62,17 +61,6 @@ const FlashcardsPage = () => {
   const handleUpdateCard = async (cardId, updatedData) => {
     await updateCard(cardId, updatedData);
     setEditingCard(null);
-  };
-
-  const handleStartReview = async (options) => {
-    const subjectFilter = options.subjectId === 'all' ? ['all'] : [options.subjectId];
-    const success = await startReview(subjectFilter, options.isCramMode, options.includeFuture);
-    if (success) {
-      setShowReviewSetup(false);
-    } else {
-      setShowReviewSetup(false);
-      toast.error("Aucune carte à réviser pour cette sélection.");
-    }
   };
 
    return (
@@ -121,7 +109,7 @@ const FlashcardsPage = () => {
           </select>
           <button
             className="btn btn-primary flex items-center gap-2"
-            onClick={() => setShowReviewSetup(true)}
+            onClick={() => setShowReviewSetupModal(true)}
           >
             <Brain size={18} />
             <span>Réviser</span>
@@ -171,13 +159,6 @@ const FlashcardsPage = () => {
         currentPage={currentPage}
         totalPages={totalPages}
         onPageChange={setCurrentPage}
-      />
-
-      <ReviewSessionSetup
-        isOpen={showReviewSetup}
-        onClose={() => setShowReviewSetup(false)}
-        onStartReview={handleStartReview}
-        subjects={subjects}
       />
     </div>
   );

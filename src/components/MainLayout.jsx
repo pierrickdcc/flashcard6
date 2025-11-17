@@ -18,6 +18,7 @@ import ConfigModal from './ConfigModal';
 import DeleteSubjectModal from './DeleteSubjectModal';
 import SignOutConfirmationModal from './SignOutConfirmationModal';
 import MemoModal from './MemoModal';
+import ReviewSessionSetup from './ReviewSessionSetup';
 
 const MainLayout = ({ children }) => {
   const {
@@ -37,11 +38,21 @@ const MainLayout = ({ children }) => {
     setShowMemoModal,
     memoToEdit,
     subjectToDelete,
+    showReviewSetupModal,
+    setShowReviewSetupModal,
   } = useUIState();
 
   const [isSideMenuOpen, setIsSideMenuOpen] = useState(false);
   const { session } = useAuth();
-  const { signOut } = useDataSync();
+  const { signOut, subjects, startReview } = useDataSync();
+
+  const handleStartReview = async (options) => {
+    const subjectFilter = options.subjectId === 'all' ? ['all'] : [options.subjectId];
+    const success = await startReview(subjectFilter, options.isCramMode, options.includeFuture);
+    if (success) {
+      setShowReviewSetupModal(false);
+    }
+  };
 
   const toggleSideMenu = () => {
     console.log("Toggling side menu from MainLayout");
@@ -106,6 +117,12 @@ const MainLayout = ({ children }) => {
         isOpen={showMemoModal}
         onClose={() => setShowMemoModal(false)}
         memoToEdit={memoToEdit}
+      />
+      <ReviewSessionSetup
+        isOpen={showReviewSetupModal}
+        onClose={() => setShowReviewSetupModal(false)}
+        onStartReview={handleStartReview}
+        subjects={subjects}
       />
     </div>
   );

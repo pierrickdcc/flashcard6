@@ -612,7 +612,7 @@ export const DataSyncProvider = ({ children }) => {
     const lines = bulkText.trim().split('\n');
     const uniqueSubjectNames = [...new Set(
       lines.map(line => {
-        const parts = line.split('/');
+        const parts = line.split('#');
         return parts.length >= 3 ? normalizeSubjectName(parts[2].trim()) : null;
       }).filter(Boolean)
     )];
@@ -637,7 +637,7 @@ export const DataSyncProvider = ({ children }) => {
     }
 
     const newCards = lines.map((line, idx) => {
-      const parts = line.split('/');
+      const parts = line.split('#');
       if (parts.length >= 3) {
         const subjectName = normalizeSubjectName(parts[2].trim());
         const subject_id = existingSubjectMap.get(subjectName);

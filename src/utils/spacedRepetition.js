@@ -153,10 +153,10 @@ export const calculateSrsData = (progress, rating) => {
     if (rating === 1) {
       return {
         status: 'learning', // Demote card back to learning
-        step: 0,
+        step: 1, // Start re-learning at the 10-minute step
         easeFactor: Math.max(MIN_EASE_FACTOR, easeFactor - 0.20),
         interval: 0, // Reset interval
-        dueDate: getDueTime(LEARNING_STEPS[0]), // Re-learn in 10 minutes
+        dueDate: getDueTime(LEARNING_STEPS[1]), // Re-learn in 10 minutes
       };
     }
 
@@ -190,6 +190,26 @@ export const calculateSrsData = (progress, rating) => {
     // Ensure interval increases by at least 1 day
     if (newInterval <= interval) {
       newInterval = interval + 1;
+    }
+
+    // Add Fuzz (Random Variation) as per user specification
+    if (newInterval > 1) {
+      // 1. Calculate fuzz (ex: 10% of the interval)
+      let fuzz = Math.round(newInterval * 0.10);
+
+      // 2. Cap the fuzz
+      if (newInterval < 20) {
+        fuzz = Math.min(fuzz, 2); // Max 2 days of variation if interval < 20 days
+      } else {
+        fuzz = Math.min(fuzz, 7); // Max 7 days of variation for long intervals
+      }
+
+      // 3. Ensure fuzz is at least 1 day
+      fuzz = Math.max(1, fuzz);
+
+      // 4. Apply a random variation (from -fuzz to +fuzz)
+      const randomFuzz = Math.round((Math.random() - 0.5) * fuzz * 2);
+      newInterval = Math.max(1, newInterval + randomFuzz); // Ensure it doesn't drop to 0
     }
 
     return {

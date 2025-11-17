@@ -61,8 +61,21 @@ const MainLayout = ({ children }) => {
   }
 
   return (
-    <div className="relative min-h-screen bg-background-body">
-      {location.pathname !== '/login' && <AppHeader onProfileClick={toggleSideMenu} />}
+    <div className="min-h-screen bg-background-body">
+      <div className="relative">
+        {location.pathname !== '/login' && (
+          <>
+            <AppHeader onProfileClick={toggleSideMenu} />
+            <ProfileSideMenu
+              isOpen={isSideMenuOpen}
+              onClose={() => setIsSideMenuOpen(false)}
+              userEmail={session?.user?.email}
+              onSignOut={signOut}
+            />
+          </>
+        )}
+      </div>
+
       <StatsBanner />
       <NavigationBar onProfileClick={toggleSideMenu} />
       <main className="pb-20 md:pb-0">
@@ -71,7 +84,6 @@ const MainLayout = ({ children }) => {
       
       {isFabVisible && <FloatingActionButton onClick={fabOnClick} />}
       
-      {/* NOUVEAU : Indicateur de synchronisation */}
       <SyncIndicator />
 
       {/* Render all modals here */}
@@ -94,13 +106,6 @@ const MainLayout = ({ children }) => {
         isOpen={showMemoModal}
         onClose={() => setShowMemoModal(false)}
         memoToEdit={memoToEdit}
-      />
-
-      <ProfileSideMenu
-        isOpen={isSideMenuOpen}
-        onClose={() => setIsSideMenuOpen(false)}
-        userEmail={session?.user?.email}
-        onSignOut={signOut}
       />
     </div>
   );

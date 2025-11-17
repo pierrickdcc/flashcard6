@@ -65,7 +65,7 @@ const FlashcardsPage = () => {
   };
 
   const handleStartReview = async (options) => {
-    const subjectFilter = selectedSubject === 'all' ? ['all'] : [selectedSubject];
+    const subjectFilter = options.subjectId === 'all' ? ['all'] : [options.subjectId];
     const success = await startReview(subjectFilter, options.isCramMode, options.includeFuture);
     if (success) {
       setShowReviewSetup(false);
@@ -177,6 +177,7 @@ const FlashcardsPage = () => {
         isOpen={showReviewSetup}
         onClose={() => setShowReviewSetup(false)}
         onStartReview={handleStartReview}
+        subjects={subjects}
       />
     </div>
   );

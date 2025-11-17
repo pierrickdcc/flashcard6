@@ -18,19 +18,21 @@ const AppHeader = ({ onProfileClick }) => {
         </div>
         <div className="header-actions">
           <ThemeToggle />
-          <button
-            className="avatar header-profile-button hidden md:flex"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              console.log("Profile button clicked in header");
-              if (onProfileClick) onProfileClick();
-            }}
-            aria-label="Menu profil"
-            type="button"
-          >
-            <User size={20} />
-          </button>
+          <div className="relative">
+            <button
+              className="avatar header-profile-button hidden md:flex"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (onProfileClick) onProfileClick();
+              }}
+              aria-label="Menu profil"
+              type="button"
+            >
+              <User size={20} />
+            </button>
+            {/* Le menu du profil sera rendu ici par le layout parent */}
+          </div>
         </div>
       </div>
     </header>

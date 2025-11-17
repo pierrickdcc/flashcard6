@@ -25,43 +25,38 @@ const StatsPage = () => {
   const reviewHistory = useLiveQuery(() => db.review_history.toArray(), []);
 
   const stats = useMemo(() => {
-    if (!cards || cards.length === 0) {
-      return {
-        totalCards: 0,
-        totalSubjects: subjects.length,
-        dueToday: 0,
-        mastery: 'N/A',
-      };
+    const totalCards = cards?.length || 0;
+    const totalSubjects = subjects?.length || 0;
+
+    if (!userCardProgress || userCardProgress.length === 0) {
+      return { totalCards, totalSubjects, dueToday: totalCards, mastery: '0%' };
     }
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const dueCards = cards.filter(c => {
-      if (!c.nextReview) return true;
-      return new Date(c.nextReview) <= today;
-    });
+    const progressWithDueDate = userCardProgress.filter(p => p.dueDate);
+    const dueToday = progressWithDueDate.filter(p => new Date(p.dueDate) <= today).length;
 
-    const cardsWithFactor = cards.filter(c => c.easeFactor && c.easeFactor > 0);
-    if (cardsWithFactor.length === 0) {
-      return {
-        totalCards: cards.length,
-        totalSubjects: subjects.length,
-        dueToday: dueCards.length,
-        mastery: 'N/A',
-      };
+    // Cards without progress are considered "due"
+    const cardsWithoutProgress = totalCards - userCardProgress.length;
+    const totalDue = dueToday + cardsWithoutProgress;
+
+    const progressWithFactor = userCardProgress.filter(p => p.easeFactor && p.easeFactor > 0);
+    if (progressWithFactor.length === 0) {
+      return { totalCards, totalSubjects, dueToday: totalDue, mastery: '0%' };
     }
 
-    const avgEase = cardsWithFactor.reduce((acc, c) => acc + c.easeFactor, 0) / cardsWithFactor.length;
+    const avgEase = progressWithFactor.reduce((acc, p) => acc + p.easeFactor, 0) / progressWithFactor.length;
     const masteryPercent = Math.round(((avgEase - 1.3) / (3.0 - 1.3)) * 100);
 
     return {
-      totalCards: cards.length,
-      totalSubjects: subjects.length,
-      dueToday: dueCards.length,
+      totalCards,
+      totalSubjects,
+      dueToday: totalDue,
       mastery: `${Math.min(100, Math.max(0, masteryPercent))}%`,
     };
-  }, [cards, subjects]);
+  }, [cards, subjects, userCardProgress]);
 
   const creationActivityData = useMemo(() => {
     const last30Days = Array(30).fill(0).map((_, i) => {
@@ -89,21 +84,22 @@ const StatsPage = () => {
   }, [cards, courses, memos]);
 
   const cardMasteryData = useMemo(() => {
-    if (!userCardProgress) return [];
+    if (!cards || !userCardProgress) return [];
 
-    const counts = { Nouvelles: 0, "En cours": 0, Acquises: 0 };
-    const totalCards = cards?.length || 0;
-
+    const statusCounts = { "Nouvelle": 0, "En apprentissage": 0, "Maîtrisée": 0 };
     const progressMap = new Map(userCardProgress.map(p => [p.cardId, p.status]));
 
     cards.forEach(card => {
-      const status = progressMap.get(card.id);
-      if (status === 'learning') counts["En cours"]++;
-      else if (status === 'review') counts["Acquises"]++;
-      else counts["Nouvelles"]++;
+      const status = progressMap.get(card.id) || 'Nouvelle';
+      if (status in statusCounts) {
+        statusCounts[status]++;
+      } else {
+        // Fallback for any unexpected status values
+        statusCounts['Nouvelle']++;
+      }
     });
 
-    return Object.entries(counts).map(([name, value]) => ({ name, value }));
+    return Object.entries(statusCounts).map(([name, value]) => ({ name, value }));
   }, [cards, userCardProgress]);
 
   const difficultCards = useMemo(() => {
@@ -184,21 +180,26 @@ const StatsPage = () => {
   }, [reviewHistory, cards, subjects]);
 
   const forecastData = useMemo(() => {
-    if (!cards) return [];
+    if (!userCardProgress) return [];
+
+    const progressMap = new Map(userCardProgress.map(p => [p.cardId, p]));
+
     return Array(7).fill(0).map((_, i) => {
       const date = new Date();
       date.setDate(date.getDate() + i);
       date.setHours(0, 0, 0, 0);
       const day = date.toLocaleDateString('fr-FR', { weekday: 'short' });
-      const count = cards.filter(c => {
-        if (!c.nextReview) return false;
-        const reviewDate = new Date(c.nextReview);
+
+      const count = userCardProgress.reduce((acc, p) => {
+        if (!p.dueDate) return acc;
+        const reviewDate = new Date(p.dueDate);
         reviewDate.setHours(0, 0, 0, 0);
-        return reviewDate.getTime() === date.getTime();
-      }).length;
+        return reviewDate.getTime() === date.getTime() ? acc + 1 : acc;
+      }, 0);
+
       return { day, cartes: count };
     });
-  }, [cards]);
+  }, [userCardProgress]);
 
   const streakData = useMemo(() => {
     if (!cards) return [];
@@ -227,15 +228,27 @@ const StatsPage = () => {
   }, [cards, subjects]);
 
   const masteryBySubject = useMemo(() => {
-    if (!cards || !subjects) return [];
-    
+    if (!cards || !subjects || !userCardProgress) return [];
+
+    const progressMap = new Map(userCardProgress.map(p => [p.cardId, p]));
+
     const masteryData = subjects.map(subject => {
-      const subjectCards = cards.filter(c => c.subject_id === subject.id && c.easeFactor);
+      const subjectCards = cards.filter(c => c.subject_id === subject.id);
       if (subjectCards.length === 0) {
         return { name: subject.name, mastery: 0, count: 0 };
       }
-      const avgEase = subjectCards.reduce((acc, c) => acc + (c.easeFactor || 1.3), 0) / subjectCards.length;
+
+      const subjectProgress = subjectCards
+        .map(c => progressMap.get(c.id))
+        .filter(p => p && p.easeFactor);
+
+      if (subjectProgress.length === 0) {
+        return { name: subject.name, mastery: 0, count: subjectCards.length };
+      }
+
+      const avgEase = subjectProgress.reduce((acc, p) => acc + p.easeFactor, 0) / subjectProgress.length;
       const masteryPercent = Math.round(((avgEase - 1.3) / (3.0 - 1.3)) * 100);
+
       return { 
         name: subject.name, 
         mastery: Math.min(100, Math.max(0, masteryPercent)),
@@ -244,7 +257,7 @@ const StatsPage = () => {
     }).filter(d => d.count > 0).sort((a, b) => a.mastery - b.mastery);
 
     return masteryData;
-  }, [cards, subjects]);
+  }, [cards, subjects, userCardProgress]);
 
   return (
     <div className="stats-page-container">

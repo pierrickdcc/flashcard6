@@ -83,22 +83,23 @@ const FlashcardsPage = () => {
         </div>
       )}
 
-      <div className="toolbar">
-        <div className="flex items-center gap-4 flex-grow">
-          <div className="search-bar" style={{ maxWidth: '300px' }}>
-            <Search size={18} className="search-icon" />
-            <input
-              type="text"
-              placeholder="Rechercher une carte..."
-              className="search-input"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
+      <div className="toolbar flex-wrap">
+        <div className="search-bar flex-grow" style={{ minWidth: '200px', maxWidth: '400px' }}>
+          <Search size={18} className="search-icon" />
+          <input
+            type="text"
+            placeholder="Rechercher une carte..."
+            className="search-input"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
           <select
             value={selectedSubject}
             onChange={(e) => setSelectedSubject(e.target.value)}
             className="select"
+            style={{ minWidth: '180px' }}
           >
             <option value="all">Toutes les matières</option>
             {subjects.map((s) => (
@@ -112,10 +113,10 @@ const FlashcardsPage = () => {
             onClick={() => setShowReviewSetupModal(true)}
           >
             <Brain size={18} />
-            <span>Réviser</span>
+            <span>Réviser ({dueCardsCount})</span>
           </button>
         </div>
-        <div className="view-toggle">
+        <div className="view-toggle ml-auto">
           <button
             onClick={() => setViewMode('grid')}
             className={`icon-btn ${

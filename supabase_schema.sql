@@ -76,6 +76,8 @@ CREATE TABLE public.user_card_progress (
     interval integer NOT NULL DEFAULT 1,
     easiness real NOT NULL DEFAULT 2.5,
     review_count integer NOT NULL DEFAULT 0,
+    status text NOT NULL DEFAULT 'new'::text,
+    step integer NOT NULL DEFAULT 0,
     created_at timestamp with time zone NOT NULL DEFAULT now(),
     updated_at timestamp with time zone NOT NULL DEFAULT now(),
     CONSTRAINT user_card_progress_pkey PRIMARY KEY (id),

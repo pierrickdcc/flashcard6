@@ -3,11 +3,11 @@ import React, { useMemo, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDataSync } from '../context/DataSyncContext';
 import { useUIState } from '../context/UIStateContext';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Brain, Pin, Plus, BookOpen, Layers, Library } from 'lucide-react';
 
 const HomePage = () => {
-  const { cards, memos, subjects, getCardsToReview } = useDataSync();
+  const { cards, memos, subjects, getCardsToReview, user_card_progress } = useDataSync();
   const { setShowAddContentModal, setMemoToEdit, setShowMemoModal, setShowReviewSetupModal } = useUIState();
   const navigate = useNavigate();
   const [dueCardsCount, setDueCardsCount] = useState(0);
@@ -28,23 +28,48 @@ const HomePage = () => {
     totalSubjects,
     forecast,
     pinnedMemos,
+    cardStatusData,
   } = useMemo(() => {
-    if (!cards || !memos) return { totalCards: 0, totalSubjects: 0, forecast: [], pinnedMemos: [] };
+    if (!cards || !memos || !user_card_progress) {
+      return { totalCards: 0, totalSubjects: 0, forecast: [], pinnedMemos: [], cardStatusData: [] };
+    }
+
+    const progressMap = new Map(user_card_progress.map(p => [p.cardId, p]));
 
     const forecastData = Array(7).fill(0).map((_, i) => {
       const date = new Date();
       date.setDate(date.getDate() + i);
       date.setHours(0, 0, 0, 0);
       const dayName = date.toLocaleDateString('fr-FR', { weekday: 'short' });
-      const count = cards.filter(c => {
-        if (!c.nextReview) return false;
-        const reviewDate = new Date(c.nextReview);
+
+      const count = cards.reduce((acc, card) => {
+        const progress = progressMap.get(card.id);
+        if (!progress || !progress.dueDate) return acc;
+
+        const reviewDate = new Date(progress.dueDate);
         reviewDate.setHours(0, 0, 0, 0);
-        return reviewDate.getTime() === date.getTime();
-      }).length;
+
+        if (reviewDate.getTime() === date.getTime()) {
+          return acc + 1;
+        }
+        return acc;
+      }, 0);
+
       return { day: dayName, cartes: count };
     });
 
+    const statusCounts = { 'Nouvelle': 0, 'En apprentissage': 0, 'Maîtrisée': 0 };
+    cards.forEach(card => {
+      const progress = progressMap.get(card.id);
+      const status = progress?.status || 'Nouvelle';
+      if (status in statusCounts) {
+        statusCounts[status]++;
+      } else {
+        statusCounts['Nouvelle']++;
+      }
+    });
+
+    const cardStatusData = Object.entries(statusCounts).map(([name, value]) => ({ name, value }));
     const pinned = memos.filter(memo => memo.isPinned).slice(0, 8);
 
     return {
@@ -52,8 +77,11 @@ const HomePage = () => {
       totalSubjects: subjects?.length || 0,
       forecast: forecastData,
       pinnedMemos: pinned,
+      cardStatusData,
     };
-  }, [cards, memos, subjects]);
+  }, [cards, memos, subjects, user_card_progress]);
+
+  const COLORS = ['#FFBB28', '#00C49F', '#0088FE'];
 
   const handleStartReview = () => {
     setShowReviewSetupModal(true);
@@ -108,51 +136,36 @@ const HomePage = () => {
         </div>
         
         {/* Section principale */}
-        <div className="home-top-section">
-          {/* Prévisions compactes */}
-          <div className="home-forecast-card" style={{ gridColumn: 'span 2', minHeight: '300px' }}>
+        <div className="home-charts-section">
+          <div className="home-forecast-card">
             <h2>Prévisions (7j)</h2>
-            {forecast.length > 0 && cards.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={forecast} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
-                  <XAxis 
-                    dataKey="day" 
-                    tick={{ fill: 'var(--text-color)', fontSize: 11 }} 
-                    axisLine={{ stroke: 'var(--border-color)' }}
-                  />
-                  <YAxis 
-                    allowDecimals={false} 
-                    tick={{ fill: 'var(--text-color)', fontSize: 11 }}
-                    axisLine={{ stroke: 'var(--border-color)' }}
-                    width={30}
-                  />
-                  <Tooltip
-                    cursor={{ fill: 'rgba(59, 130, 246, 0.1)' }}
-                    contentStyle={{ 
-                      background: 'var(--background-card)', 
-                      border: '1px solid var(--border-color)', 
-                      borderRadius: '8px',
-                      fontSize: '0.8rem',
-                      padding: '0.5rem'
-                    }}
-                  />
-                  <Bar 
-                    dataKey="cartes" 
-                    fill="var(--primary-color)" 
-                    radius={[6, 6, 0, 0]} 
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-                Aucune donnée disponible
-              </div>
-            )}
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={forecast} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+                <XAxis dataKey="day" tick={{ fill: 'var(--text-color)', fontSize: 11 }} axisLine={{ stroke: 'var(--border-color)' }} />
+                <YAxis allowDecimals={false} tick={{ fill: 'var(--text-color)', fontSize: 11 }} axisLine={{ stroke: 'var(--border-color)' }} width={30} />
+                <Tooltip cursor={{ fill: 'rgba(59, 130, 246, 0.1)' }} contentStyle={{ background: 'var(--background-card)', border: '1px solid var(--border-color)', borderRadius: '8px', fontSize: '0.8rem', padding: '0.5rem' }} />
+                <Bar dataKey="cartes" fill="var(--primary-color)" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
+          <div className="home-status-card">
+            <h2>Répartition</h2>
+            <ResponsiveContainer width="100%" height={250}>
+              <PieChart>
+                <Pie data={cardStatusData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} fill="#8884d8" labelLine={false} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                  {cardStatusData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip contentStyle={{ background: 'var(--background-card)', border: '1px solid var(--border-color)', borderRadius: '8px' }} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
 
-          {/* Actions rapides - CORRIGÉ */}
+        <div className="home-actions-section">
           <div className="home-actions-card">
-            <button 
+            <button
               onClick={handleStartReview}
               className="home-action-btn"
             >

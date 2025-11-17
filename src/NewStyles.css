@@ -1688,6 +1688,31 @@ body {
   color: var(--text-heading-color);
 }
 
+/* Home Page Charts */
+.home-charts-section {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1.5rem;
+  align-items: stretch;
+}
+
+.home-status-card {
+    background: var(--background-card);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 1.25rem;
+    box-shadow: var(--shadow-md);
+    display: flex;
+    flex-direction: column;
+}
+
+.home-status-card h2 {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-heading-color);
+    margin-bottom: 0.75rem;
+}
+
 .profile-menu-item svg {
   color: var(--text-muted);
 }
@@ -1711,4 +1736,38 @@ body {
   .navigation-bar .nav-link:last-child {
     display: none;
   }
+}
+
+/* Export Buttons */
+.export-button {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  background-color: var(--muted-bg);
+  color: var(--text-color);
+  font-size: 0.875rem;
+  font-weight: 500;
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.export-button:hover {
+  background-color: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+}
+
+.export-button-dropdown {
+  width: 100%;
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  color: var(--text-color);
+  transition: all 0.2s;
+  cursor: pointer;
+}
+.export-button-dropdown:hover {
+  background-color: var(--muted-bg);
+  color: var(--text-heading-color);
 }

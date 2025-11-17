@@ -740,65 +740,57 @@ export const DataSyncProvider = ({ children }) => {
 
   const reviewCard = async (cardId, rating) => {
     if (isCramMode) {
+      console.log('Cram Mode: Skipping SRS update.');
       return;
     }
 
     const userId = session?.user?.id;
     if (!userId) return;
 
+    // 1. Récupérer l'état actuel de la progression
     const progress = await db.user_card_progress
-      .where({ cardId: cardId, userId: userId }) 
+      .where({ cardId: cardId, userId: userId })
       .first();
 
-    const { interval, easeFactor, status, dueDate, step } = calculateSrsData(progress, rating);
+    // 2. Calculer les nouvelles données SRS
+    const srsData = calculateSrsData(progress, rating);
 
-    const updatedProgress = {
+    // 3. Mettre à jour ou créer la progression de la carte
+    const progressPayload = {
       cardId: cardId,
       userId: userId,
-      interval,
-      easeFactor,
-      status,
-      dueDate,
-      step: step,
+      ...srsData,
       reviewCount: (progress?.reviewCount || 0) + 1,
       updatedAt: new Date().toISOString(),
-      isSynced: 0, 
+      isSynced: 0,
     };
 
-    if (progress) {
-      await db.user_card_progress.update(progress.id, updatedProgress);
+    if (progress?.id) {
+      await db.user_card_progress.update(progress.id, progressPayload);
     } else {
       await db.user_card_progress.add({
-        ...updatedProgress,
-        id: `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        ...progressPayload,
+        id: `local_progress_${Date.now()}`,
       });
     }
 
-    const cardToUpdate = await db.cards.get(cardId);
-    if (cardToUpdate) {
-      await db.cards.update(cardId, {
-        nextReview: dueDate,
-        reviewCount: (cardToUpdate.reviewCount || 0) + 1,
-      });
-    }
+    // 4. Mettre à jour la carte elle-même avec la nouvelle date de révision
+    await db.cards.update(cardId, {
+      nextReview: srsData.dueDate,
+      // On peut aussi mettre à jour le easeFactor directement sur la carte si besoin
+    });
 
-    // === AJOUTER CE BLOC ===
-    // Enregistrer l'événement de révision dans l'historique
-    try {
-      await db.review_history.add({
-        id: `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        cardId: cardId,
-        userId: userId,
-        rating: rating, // Le bouton cliqué (1-5)
-        reviewed_at: new Date().toISOString(),
-        duration_ms: 0, // Optionnel : vous pourriez calculer le temps passé
-        isSynced: 0
-      });
-    } catch (error) {
-      console.error("Impossible d'enregistrer l'historique de révision :", error);
-    }
-    // === FIN DU BLOC AJOUTÉ ===
+    // 5. Enregistrer l'événement de révision dans l'historique
+    await db.review_history.add({
+      id: `local_history_${Date.now()}`,
+      cardId: cardId,
+      userId: userId,
+      rating: rating,
+      reviewed_at: new Date().toISOString(),
+      isSynced: 0,
+    });
 
+    // 6. Déclencher la synchronisation si en ligne
     if (isOnline) {
       pushLocalChanges();
     }

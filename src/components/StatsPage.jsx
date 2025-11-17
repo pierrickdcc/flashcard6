@@ -1,10 +1,11 @@
+// src/components/StatsPage.jsx
 import React, { useMemo } from 'react';
 import { useDataSync } from '../context/DataSyncContext';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import { 
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, 
-  PieChart, Pie, Cell, LineChart, Line, CartesianGrid, Legend
+  PieChart, Pie, Cell, Legend
 } from 'recharts';
 import CalendarHeatmap from 'react-calendar-heatmap';
 import 'react-calendar-heatmap/dist/styles.css';
@@ -18,7 +19,6 @@ const PIE_COLORS = {
   "Acquises": "#10B981",
 };
 
-
 const StatsPage = () => {
   const { cards = [], subjects = [], courses = [], memos = [] } = useDataSync();
   const userCardProgress = useLiveQuery(() => db.user_card_progress.toArray(), []);
@@ -26,34 +26,24 @@ const StatsPage = () => {
 
   const stats = useMemo(() => {
     if (!cards || cards.length === 0) {
-      return {
-        totalCards: 0,
-        totalSubjects: subjects.length,
-        dueToday: 0,
-        mastery: 'N/A',
-      };
+      return { totalCards: 0, totalSubjects: subjects.length, dueToday: 0, mastery: 'N/A' };
     }
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const now = new Date();
+    const progressMap = new Map(userCardProgress?.map(p => [p.cardId, p]) || []);
 
     const dueCards = cards.filter(c => {
-      if (!c.nextReview) return true;
-      return new Date(c.nextReview) <= today;
+      const progress = progressMap.get(c.id);
+      if (!progress || !progress.dueDate) return true; // Considérée due si pas de progrès
+      return new Date(progress.dueDate) <= now;
     });
 
-    const cardsWithFactor = cards.filter(c => c.easeFactor && c.easeFactor > 0);
-    if (cardsWithFactor.length === 0) {
-      return {
-        totalCards: cards.length,
-        totalSubjects: subjects.length,
-        dueToday: dueCards.length,
-        mastery: 'N/A',
-      };
+    const cardsWithFactor = userCardProgress?.filter(p => p.easeFactor) || [];
+    let masteryPercent = 0;
+    if (cardsWithFactor.length > 0) {
+      const avgEase = cardsWithFactor.reduce((acc, c) => acc + c.easeFactor, 0) / cardsWithFactor.length;
+      masteryPercent = Math.round(((avgEase - 1.3) / (3.0 - 1.3)) * 100);
     }
-
-    const avgEase = cardsWithFactor.reduce((acc, c) => acc + c.easeFactor, 0) / cardsWithFactor.length;
-    const masteryPercent = Math.round(((avgEase - 1.3) / (3.0 - 1.3)) * 100);
 
     return {
       totalCards: cards.length,
@@ -61,26 +51,26 @@ const StatsPage = () => {
       dueToday: dueCards.length,
       mastery: `${Math.min(100, Math.max(0, masteryPercent))}%`,
     };
-  }, [cards, subjects]);
+  }, [cards, subjects, userCardProgress]);
 
   const creationActivityData = useMemo(() => {
     const last30Days = Array(30).fill(0).map((_, i) => {
       const date = new Date();
-      date.setDate(date.getDate() - i);
+      date.setDate(date.getDate() - (29 - i));
       return date.toISOString().split('T')[0];
-    }).reverse();
+    });
 
     const dataMap = new Map(last30Days.map(day => [day, { day: new Date(day).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }), cartes: 0, cours: 0, memos: 0 }]));
 
     [...cards, ...courses, ...memos].forEach(item => {
       const createdAtDate = item.created_at || item.createdAt;
-      if (createdAtDate && !isNaN(new Date(createdAtDate))) {
+      if (createdAtDate) {
         const createdAt = new Date(createdAtDate).toISOString().split('T')[0];
         if (dataMap.has(createdAt)) {
           const entry = dataMap.get(createdAt);
           if ('question' in item) entry.cartes += 1;
           else if ('title' in item) entry.cours += 1;
-          else entry.memos += 1;
+          else if ('content' in item) entry.memos += 1;
         }
       }
     });
@@ -89,16 +79,16 @@ const StatsPage = () => {
   }, [cards, courses, memos]);
 
   const cardMasteryData = useMemo(() => {
-    if (!userCardProgress) return [];
-
-    const counts = { Nouvelles: 0, "En cours": 0, Acquises: 0 };
-    const totalCards = cards?.length || 0;
+    const counts = { "Nouvelles": 0, "En cours": 0, "Acquises": 0 };
+    if (!cards || !userCardProgress) {
+        counts.Nouvelles = cards?.length || 0;
+        return Object.entries(counts).map(([name, value]) => ({ name, value }));
+    }
 
     const progressMap = new Map(userCardProgress.map(p => [p.cardId, p.status]));
-
     cards.forEach(card => {
       const status = progressMap.get(card.id);
-      if (status === 'learning') counts["En cours"]++;
+      if (status === 'learning' || status === 'relearning') counts["En cours"]++;
       else if (status === 'review') counts["Acquises"]++;
       else counts["Nouvelles"]++;
     });
@@ -118,10 +108,7 @@ const StatsPage = () => {
 
     return sortedProgress.map(p => {
       const card = cardMap.get(p.cardId);
-      return {
-        ...card,
-        easeFactor: p.easeFactor,
-      };
+      return card ? { ...card, easeFactor: p.easeFactor } : null;
     }).filter(Boolean);
   }, [cards, userCardProgress]);
 
@@ -141,13 +128,12 @@ const StatsPage = () => {
 
   const answerAccuracyData = useMemo(() => {
     if (!reviewHistory) return [];
-    const ratings = { 'À revoir': 0, 'Difficile': 0, 'Moyen': 0, 'Facile': 0, 'Très facile': 0 };
+    const ratings = { 'À revoir': 0, 'Difficile': 0, 'Moyen': 0, 'Facile': 0 };
     reviewHistory.forEach(r => {
       if (r.rating === 1) ratings['À revoir']++;
       else if (r.rating === 2) ratings['Difficile']++;
       else if (r.rating === 3) ratings['Moyen']++;
-      else if (r.rating === 4) ratings['Facile']++;
-      else if (r.rating === 5) ratings['Très facile']++;
+      else if (r.rating >= 4) ratings['Facile']++;
     });
     return Object.entries(ratings).map(([name, value]) => ({ name, value }));
   }, [reviewHistory]);
@@ -184,34 +170,26 @@ const StatsPage = () => {
   }, [reviewHistory, cards, subjects]);
 
   const forecastData = useMemo(() => {
-    if (!cards) return [];
-    return Array(7).fill(0).map((_, i) => {
+    if (!userCardProgress) return [];
+    const data = Array(7).fill(0).map((_, i) => {
       const date = new Date();
       date.setDate(date.getDate() + i);
       date.setHours(0, 0, 0, 0);
       const day = date.toLocaleDateString('fr-FR', { weekday: 'short' });
-      const count = cards.filter(c => {
-        if (!c.nextReview) return false;
-        const reviewDate = new Date(c.nextReview);
-        reviewDate.setHours(0, 0, 0, 0);
-        return reviewDate.getTime() === date.getTime();
-      }).length;
-      return { day, cartes: count };
+      return { day, cartes: 0, date: date.getTime() };
     });
-  }, [cards]);
 
-  const streakData = useMemo(() => {
-    if (!cards) return [];
-    
-    const last30Days = Array(30).fill(0).map((_, i) => {
-      const date = new Date();
-      date.setDate(date.getDate() - (29 - i));
-      date.setHours(0, 0, 0, 0);
-      return { day: i + 1, reviews: 0, date: date.getTime() };
+    userCardProgress.forEach(p => {
+        if (p.dueDate) {
+            const reviewDate = new Date(p.dueDate);
+            reviewDate.setHours(0, 0, 0, 0);
+            const reviewTime = reviewDate.getTime();
+            const dayData = data.find(d => d.date === reviewTime);
+            if(dayData) dayData.cartes++;
+        }
     });
-    
-    return last30Days;
-  }, [cards]);
+    return data;
+  }, [userCardProgress]);
 
   const cardsBySubject = useMemo(() => {
     if (!cards || !subjects) return [];
@@ -227,24 +205,33 @@ const StatsPage = () => {
   }, [cards, subjects]);
 
   const masteryBySubject = useMemo(() => {
-    if (!cards || !subjects) return [];
-    
-    const masteryData = subjects.map(subject => {
-      const subjectCards = cards.filter(c => c.subject_id === subject.id && c.easeFactor);
-      if (subjectCards.length === 0) {
-        return { name: subject.name, mastery: 0, count: 0 };
+    if (!userCardProgress || !cards || !subjects) return [];
+
+    const cardToSubjectMap = new Map(cards.map(c => [c.id, c.subject_id]));
+    const subjectProgress = {};
+
+    userCardProgress.forEach(p => {
+      const subjectId = cardToSubjectMap.get(p.cardId);
+      if (subjectId && p.easeFactor) {
+        if (!subjectProgress[subjectId]) {
+          subjectProgress[subjectId] = { totalEase: 0, count: 0 };
+        }
+        subjectProgress[subjectId].totalEase += p.easeFactor;
+        subjectProgress[subjectId].count++;
       }
-      const avgEase = subjectCards.reduce((acc, c) => acc + (c.easeFactor || 1.3), 0) / subjectCards.length;
+    });
+
+    const subjectNameMap = new Map(subjects.map(s => [s.id, s.name]));
+    return Object.entries(subjectProgress).map(([subjectId, data]) => {
+      const avgEase = data.totalEase / data.count;
       const masteryPercent = Math.round(((avgEase - 1.3) / (3.0 - 1.3)) * 100);
-      return { 
-        name: subject.name, 
+      return {
+        name: subjectNameMap.get(subjectId) || 'Inconnu',
         mastery: Math.min(100, Math.max(0, masteryPercent)),
-        count: subjectCards.length
+        count: data.count
       };
     }).filter(d => d.count > 0).sort((a, b) => a.mastery - b.mastery);
-
-    return masteryData;
-  }, [cards, subjects]);
+  }, [userCardProgress, cards, subjects]);
 
   return (
     <div className="stats-page-container">
@@ -282,14 +269,12 @@ const StatsPage = () => {
       {/* Graphiques */}
       <div className="dashboard-grid-stats">
         
-        {/* Prévisions */}
         <div className="glass-card" style={{ minHeight: '300px' }}>
           <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--text-heading-color)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <TrendingUp size={20} />
             Prévisions (7 jours)
           </h3>
-          {forecastData.length > 0 && cards.length > 0 ? (
-            <ResponsiveContainer width="100%" height={220}>
+          <ResponsiveContainer width="100%" height={220}>
               <BarChart data={forecastData} margin={{ top: 5, right: 0, left: -20, bottom: 5 }}>
                 <XAxis dataKey="day" tick={{ fill: 'var(--text-color)', fontSize: 12 }} />
                 <YAxis allowDecimals={false} tick={{ fill: 'var(--text-color)', fontSize: 12 }} />
@@ -305,14 +290,8 @@ const StatsPage = () => {
                 <Bar dataKey="cartes" fill="var(--primary-color)" radius={[8, 8, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
-          ) : (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '220px', color: 'var(--text-muted)' }}>
-              Aucune donnée disponible
-            </div>
-          )}
         </div>
 
-        {/* Activité de Création */}
         <div className="glass-card" style={{ minHeight: '300px' }}>
           <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--text-heading-color)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <BarChart3 size={20} />
@@ -320,7 +299,6 @@ const StatsPage = () => {
           </h3>
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={creationActivityData} margin={{ top: 5, right: 0, left: -20, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
               <XAxis dataKey="day" tick={{ fill: 'var(--text-color)', fontSize: 12 }} />
               <YAxis allowDecimals={false} tick={{ fill: 'var(--text-color)', fontSize: 12 }} />
               <Tooltip
@@ -340,13 +318,11 @@ const StatsPage = () => {
           </ResponsiveContainer>
         </div>
 
-        {/* Répartition */}
         <div className="glass-card" style={{ minHeight: '300px' }}>
           <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--text-heading-color)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <BookOpen size={20} />
             Répartition par matière
           </h3>
-          {cardsBySubject.length > 0 ? (
             <ResponsiveContainer width="100%" height={220}>
               <PieChart>
                 <Pie 
@@ -373,20 +349,13 @@ const StatsPage = () => {
                 />
               </PieChart>
             </ResponsiveContainer>
-          ) : (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '220px', color: 'var(--text-muted)' }}>
-              Aucune donnée disponible
-            </div>
-          )}
         </div>
 
-        {/* Maîtrise par matière */}
         <div className="glass-card" style={{ minHeight: '300px' }}>
           <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--text-heading-color)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <Target size={20} />
             Maîtrise par matière
           </h3>
-          {masteryBySubject.length > 0 ? (
             <ResponsiveContainer width="100%" height={220}>
               <BarChart 
                 data={masteryBySubject} 
@@ -413,14 +382,8 @@ const StatsPage = () => {
                 <Bar dataKey="mastery" fill="var(--stat-value-mastery)" radius={[0, 8, 8, 0]} />
               </BarChart>
             </ResponsiveContainer>
-          ) : (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '220px', color: 'var(--text-muted)' }}>
-              Aucune donnée disponible
-            </div>
-          )}
         </div>
 
-        {/* Maturité des Cartes */}
         <div className="glass-card" style={{ minHeight: '300px' }}>
             <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--text-heading-color)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <BrainCircuit size={20} />
@@ -428,18 +391,79 @@ const StatsPage = () => {
             </h3>
             <ResponsiveContainer width="100%" height={220}>
                 <PieChart>
-                    <Pie data={cardMasteryData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5}>
+                    <Pie data={cardMasteryData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} label={({ name, value }) => `${name}: ${value}`}>
                         {cardMasteryData.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={PIE_COLORS[entry.name]} />
                         ))}
                     </Pie>
                     <Tooltip contentStyle={{ background: 'var(--background-card)', border: '1px solid var(--border-color)', borderRadius: '8px' }} />
-                    <Legend wrapperStyle={{ fontSize: '0.8rem' }} />
+                    <Legend wrapperStyle={{ fontSize: '0.8rem', paddingTop: '10px' }} />
                 </PieChart>
             </ResponsiveContainer>
         </div>
 
-        {/* Cartes Difficiles */}
+        <div className="glass-card" style={{ minHeight: '300px' }}>
+          <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--text-heading-color)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Target size={20} />
+            Précision des Réponses
+          </h3>
+          <ResponsiveContainer width="100%" height={220}>
+            <PieChart>
+              <Pie data={answerAccuracyData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
+                {answerAccuracyData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip contentStyle={{ background: 'var(--background-card)', border: '1px solid var(--border-color)', borderRadius: '8px' }} />
+              <Legend wrapperStyle={{ fontSize: '0.8rem', paddingTop: '10px' }} />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="glass-card" style={{ gridColumn: 'span 2', minHeight: '300px' }}>
+          <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--text-heading-color)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <BarChart3 size={20} />
+            Taux de réussite par matière
+          </h3>
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={successRateBySubjectData} layout="vertical" margin={{ top: 5, right: 20, left: 5, bottom: 5 }}>
+              <XAxis type="number" tick={{ fill: 'var(--text-color)', fontSize: 12 }} />
+              <YAxis type="category" dataKey="name" tick={{ fill: 'var(--text-color)', fontSize: 11 }} width={100} />
+              <Tooltip
+                contentStyle={{ background: 'var(--background-card)', border: '1px solid var(--border-color)', borderRadius: '8px' }}
+                formatter={(value, name, props) => {
+                  const { payload } = props;
+                  const total = payload.total;
+                  const percentage = total > 0 ? ((value / total) * 100).toFixed(0) : 0;
+                  return `${value} (${percentage}%)`;
+                }}
+              />
+              <Legend wrapperStyle={{ fontSize: '0.8rem', paddingTop: '10px' }} />
+              <Bar dataKey="Réussite" stackId="a" fill="#10B981" />
+              <Bar dataKey="Échec" stackId="a" fill="#EF4444" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="glass-card" style={{ gridColumn: 'span 3' }}>
+          <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--text-heading-color)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Flame size={20} />
+            Calendrier d'Activité
+          </h3>
+          <div style={{ height: '180px', overflow: 'hidden' }}>
+            <CalendarHeatmap
+              startDate={new Date(new Date().setFullYear(new Date().getFullYear() - 1))}
+              endDate={new Date()}
+              values={activityStreakData}
+              classForValue={(value) => {
+                if (!value) return 'color-empty';
+                return `color-scale-${Math.min(4, value.count)}`;
+              }}
+              tooltipDataAttrs={value => ({ 'data-tooltip-id': 'heatmap-tooltip', 'data-tooltip-content': `${value.date}: ${value.count} révisions` })}
+            />
+          </div>
+        </div>
+
         <div className="glass-card" style={{ gridColumn: 'span 3' }}>
             <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--text-heading-color)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <ListTodo size={20} />
@@ -463,91 +487,10 @@ const StatsPage = () => {
                 )}
             </div>
         </div>
-
-        {/* Calendrier d'Activité "Streak" */}
-        <div className="glass-card" style={{ gridColumn: 'span 3' }}>
-          <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--text-heading-color)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Flame size={20} />
-            Calendrier d'Activité
-          </h3>
-          <div style={{ height: '180px', overflow: 'hidden' }}>
-            <CalendarHeatmap
-              startDate={new Date(new Date().setFullYear(new Date().getFullYear() - 1))}
-              endDate={new Date()}
-              values={activityStreakData}
-              classForValue={(value) => {
-                if (!value) return 'color-empty';
-                return `color-scale-${Math.min(4, value.count)}`;
-              }}
-              tooltipDataAttrs={value => ({ 'data-tooltip-id': 'heatmap-tooltip', 'data-tooltip-content': `${value.date}: ${value.count} révisions` })}
-            />
-          </div>
-        </div>
-
-        {/* Précision des Réponses */}
-        <div className="glass-card" style={{ minHeight: '300px' }}>
-          <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--text-heading-color)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Target size={20} />
-            Précision des Réponses
-          </h3>
-          <ResponsiveContainer width="100%" height={220}>
-            <PieChart>
-              <Pie data={answerAccuracyData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80}>
-                {answerAccuracyData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip contentStyle={{ background: 'var(--background-card)', border: '1px solid var(--border-color)', borderRadius: '8px' }} />
-              <Legend wrapperStyle={{ fontSize: '0.8rem' }} />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Taux de réussite par matière */}
-        <div className="glass-card" style={{ gridColumn: 'span 2', minHeight: '300px' }}>
-          <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--text-heading-color)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <BarChart3 size={20} />
-            Taux de réussite par matière
-          </h3>
-          <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={successRateBySubjectData} layout="vertical" margin={{ top: 5, right: 20, left: 5, bottom: 5 }}>
-              <XAxis type="number" domain={[0, 100]} tick={{ fill: 'var(--text-color)', fontSize: 12 }} />
-              <YAxis type="category" dataKey="name" tick={{ fill: 'var(--text-color)', fontSize: 11 }} width={100} />
-              <Tooltip
-                contentStyle={{ background: 'var(--background-card)', border: '1px solid var(--border-color)', borderRadius: '8px' }}
-                formatter={(value, name, props) => {
-                  const { payload } = props;
-                  const total = payload.Réussite + payload.Échec;
-                  const percentage = total > 0 ? ((value / total) * 100).toFixed(0) : 0;
-                  return `${value} (${percentage}%)`;
-                }}
-              />
-              <Legend wrapperStyle={{ fontSize: '0.8rem' }}/>
-              <Bar dataKey="Réussite" stackId="a" fill="#10B981" />
-              <Bar dataKey="Échec" stackId="a" fill="#EF4444" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
       </div>
     </div>
   );
 };
-
-const heatmapStyles = `
-.react-calendar-heatmap .color-empty { fill: rgba(255, 255, 255, 0.05); }
-.react-calendar-heatmap .color-scale-1 { fill: #10B981; }
-.react-calendar-heatmap .color-scale-2 { fill: #34D399; }
-.react-calendar-heatmap .color-scale-3 { fill: #6EE7B7; }
-.react-calendar-heatmap .color-scale-4 { fill: #A7F3D0; }
-.react-calendar-heatmap .color-scale-5 { fill: #D1FAE5; }
-.react-tooltip {
-  background-color: var(--background-card) !important;
-  color: var(--text-color) !important;
-  border: 1px solid var(--border-color) !important;
-  border-radius: 8px !important;
-  font-size: 0.875rem !important;
-}
-`;
 
 const StatsPageWrapper = () => (
   <>
@@ -556,5 +499,20 @@ const StatsPageWrapper = () => (
     <ReactTooltip id="heatmap-tooltip" />
   </>
 );
+
+const heatmapStyles = `
+.react-calendar-heatmap .color-empty { fill: rgba(255, 255, 255, 0.05); }
+.react-calendar-heatmap .color-scale-1 { fill: #10B981; }
+.react-calendar-heatmap .color-scale-2 { fill: #34D399; }
+.react-calendar-heatmap .color-scale-3 { fill: #6EE7B7; }
+.react-calendar-heatmap .color-scale-4 { fill: #A7F3D0; }
+.react-tooltip {
+  background-color: var(--background-card) !important;
+  color: var(--text-color) !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 8px !important;
+  font-size: 0.875rem !important;
+}
+`;
 
 export default StatsPageWrapper;

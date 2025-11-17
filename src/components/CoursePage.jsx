@@ -42,8 +42,23 @@ const CoursePage = () => {
     setShowEditModal(false);
     setEditingCourse(null);
   };
+  const handleDelete = (e, course) => {
+    e.stopPropagation(); // Empêcher la propagation immédiatement
+    setDeletingCourse(course);
+    setShowDeleteModal(true);
+  };
 
-  const handleDelete = (course) => {
+  const confirmDelete = async () => {
+    if (!deletingCourse) return;
+    try {
+      await deleteCourse(deletingCourse.id);
+      setShowDeleteModal(false);
+      setDeletingCourse(null);
+    } catch (error) {
+      console.error('Erreur lors de la suppression:', error);
+    }
+  };
+  const handle = (course) => {
     setDeletingCourse(course);
     setShowDeleteModal(true);
   };

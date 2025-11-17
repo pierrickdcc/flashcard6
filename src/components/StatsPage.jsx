@@ -35,19 +35,20 @@ const StatsPage = () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const progressWithDueDate = userCardProgress.filter(p => p.dueDate);
-    const dueToday = progressWithDueDate.filter(p => new Date(p.dueDate) <= today).length;
+    
+    const progressMap = new Map(userCardProgress.map(p => [p.cardId, p]));
 
     // Cards without progress are considered "due"
-    const cardsWithoutProgress = totalCards - userCardProgress.length;
+    const dueToday = userCardProgress.filter(p => p.dueDate && new Date(p.dueDate) <= today).length;
+   
+    // 2. Compter les cartes qui existent mais n'ont AUCUNE progression
+    const cardsWithoutProgress = (cards || []).filter(card => !progressMap.has(card.id)).length;
+  
+   // Le total dû est la somme des deux
     const totalDue = dueToday + cardsWithoutProgress;
 
     const progressWithFactor = userCardProgress.filter(p => p.easeFactor && p.easeFactor > 0);
-    if (progressWithFactor.length === 0) {
-      return { totalCards, totalSubjects, dueToday: totalDue, mastery: '0%' };
-    }
-
-    const avgEase = progressWithFactor.reduce((acc, p) => acc + p.easeFactor, 0) / progressWithFactor.length;
+    const avgEase = progressWithFactor.length > 0 ? progressWithFactor.reduce((acc, p) => acc + p.easeFactor, 0) / progressWithFactor.length :
     const masteryPercent = Math.round(((avgEase - 1.3) / (3.0 - 1.3)) * 100);
 
     return {

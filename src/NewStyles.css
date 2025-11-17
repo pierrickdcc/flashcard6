@@ -1946,7 +1946,7 @@ html.dark .memo-card-redesign:hover {
 }
 
 .card-content {
-    font-size: clamp(1rem, 4vw, 2.25rem); /* Taille fluide et responsive */
+    font-size: clamp(0.9rem, 3.5vw, 2rem); /* Réduit un peu la taille max */
     font-weight: 500;
     color: var(--text-heading-color);
     text-align: center;
@@ -1965,7 +1965,7 @@ html.dark .memo-card-redesign:hover {
 /* Ajustement de la taille du texte selon la taille de l'écran */
 @media (max-width: 768px) {
     .card-content {
-        font-size: clamp(0.9rem, 3.5vw, 1.5rem);
+        font-size: clamp(0.85rem, 3vw, 1.35rem);
         padding: 0.75rem;
         line-height: 1.35;
     }
@@ -1973,7 +1973,7 @@ html.dark .memo-card-redesign:hover {
 
 @media (max-width: 480px) {
     .card-content {
-        font-size: clamp(0.8rem, 3vw, 1.25rem);
+        font-size: clamp(0.75rem, 2.5vw, 1.15rem);
         padding: 0.5rem;
         line-height: 1.4;
     }
@@ -1981,18 +1981,18 @@ html.dark .memo-card-redesign:hover {
 
 /* Réduction automatique pour les textes très longs */
 .card-content:has(+ *) { /* Si il y a une image aussi */
-    font-size: clamp(0.9rem, 3.5vw, 1.75rem);
+    font-size: clamp(0.85rem, 3vw, 1.6rem);
 }
 
 @media (max-width: 768px) {
     .card-content:has(+ *) {
-        font-size: clamp(0.8rem, 3vw, 1.25rem);
+        font-size: clamp(0.75rem, 2.5vw, 1.15rem);
     }
 }
 
 @media (max-width: 480px) {
     .card-content:has(+ *) {
-        font-size: clamp(0.75rem, 2.5vw, 1rem);
+        font-size: clamp(0.7rem, 2vw, 0.95rem);
     }
 }
 

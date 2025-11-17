@@ -1707,11 +1707,17 @@ body {
 
 /* Home Page Charts */
 .home-charts-section {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
+ display: grid;
+  grid-template-columns: 1fr; /* Mobile-first: 1 column */
   gap: 1.5rem;
   align-items: stretch;
-}
+ }
+  
+ @media (min-width: 768px) {
+   .home-charts-section {
+      grid-template-columns: 2fr 1fr; /* Desktop: 2fr 1fr */
+     }
+ }
 
 .home-status-card {
     background: var(--background-card);

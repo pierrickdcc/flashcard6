@@ -4,6 +4,7 @@ export const TABLE_NAMES = {
   COURSES: 'courses',
   MEMOS: 'memos',
   USER_CARD_PROGRESS: 'user_card_progress',
+  REVIEW_HISTORY: 'review_history',
   DELETIONS_PENDING: 'deletionsPending',
 };
 

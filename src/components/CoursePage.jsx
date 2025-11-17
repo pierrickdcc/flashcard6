@@ -42,12 +42,14 @@ const CoursePage = () => {
     setShowEditModal(false);
     setEditingCourse(null);
   };
+  
   const handleDelete = (e, course) => {
     e.stopPropagation(); // Empêcher la propagation immédiatement
     setDeletingCourse(course);
     setShowDeleteModal(true);
   };
 
+  // Correction : Suppression de la deuxième définition de confirmDelete et de la fonction 'handle' inutilisée
   const confirmDelete = async () => {
     if (!deletingCourse) return;
     try {
@@ -57,17 +59,6 @@ const CoursePage = () => {
     } catch (error) {
       console.error('Erreur lors de la suppression:', error);
     }
-  };
-  const handle = (course) => {
-    setDeletingCourse(course);
-    setShowDeleteModal(true);
-  };
-
-  const confirmDelete = async () => {
-    if (!deletingCourse) return;
-    await deleteCourse(deletingCourse.id);
-    setShowDeleteModal(false);
-    setDeletingCourse(null);
   };
 
   const coursesBySubject = useMemo(() => {
@@ -292,8 +283,7 @@ const CoursePage = () => {
                       </button>
                       <button
                         onClick={(e) => {
-                          e.stopPropagation();
-                          handleDelete(course);
+                          handleDelete(e, course); // Utilise la fonction handleDelete corrigée
                         }}
                         className="icon-btn"
                         style={{ padding: '0.5rem', color: '#ef4444' }}

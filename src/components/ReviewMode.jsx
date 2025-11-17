@@ -5,6 +5,8 @@ import { useDataSync } from '../context/DataSyncContext';
 import { useUIState } from '../context/UIStateContext';
 import { X, RotateCcw, CheckCircle, Home } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import './ReviewMode.css';
+import FitText from './FitText';
 
 const ReviewMode = () => {
   const { reviewCard, subjects } = useDataSync();
@@ -126,53 +128,40 @@ const ReviewMode = () => {
             animate={{ rotateY: isFlipped ? 180 : 0 }}
             transition={{ duration: 0.4, ease: 'easeInOut' }}
             onClick={handleCardClick}
-            style={{ cursor: 'pointer' }}
           >
             {/* Front */}
             <div className="card-face card-face-front">
               <span className="card-subject-tag">{subjectMap.get(currentCard.subject_id) || 'Sujet'}</span>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', width: '100%' }}>
-                <p className="card-content" style={{ fontSize: currentCard.question_image ? '1.5rem' : '2.25rem' }}>
+              <div className="card-inner-content">
+                <FitText className="card-text">
                   {currentCard.question}
-                </p>
+                </FitText>
                 {currentCard.question_image && (
                   <img 
                     src={currentCard.question_image} 
-                    alt="Question" 
-                    style={{ 
-                      maxWidth: '90%', 
-                      maxHeight: '300px', 
-                      borderRadius: '12px', 
-                      objectFit: 'contain',
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-                    }}
+                    alt="Question"
+                    className="card-image"
                   />
                 )}
               </div>
-              <div style={{ height: '24px' }}></div>
+              <div className="card-spacer"></div>
             </div>
             {/* Back */}
             <div className="card-face card-face-back">
               <span className="card-subject-tag">{subjectMap.get(currentCard.subject_id) || 'Sujet'}</span>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', width: '100%' }}>
-                <p className="card-content" style={{ fontSize: currentCard.answer_image ? '1.25rem' : '1.5rem' }}>
+              <div className="card-inner-content">
+                <FitText className="card-text">
                   {currentCard.answer}
-                </p>
+                </FitText>
                 {currentCard.answer_image && (
                   <img 
                     src={currentCard.answer_image} 
-                    alt="Réponse" 
-                    style={{ 
-                      maxWidth: '90%', 
-                      maxHeight: '250px', 
-                      borderRadius: '12px', 
-                      objectFit: 'contain',
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-                    }}
+                    alt="Réponse"
+                    className="card-image"
                   />
                 )}
               </div>
-              <div style={{ height: '24px' }}></div>
+              <div className="card-spacer"></div>
             </div>
           </motion.div>
         </div>

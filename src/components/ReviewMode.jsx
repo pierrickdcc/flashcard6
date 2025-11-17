@@ -1,3 +1,4 @@
+// src/components/ReviewMode.jsx
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDataSync } from '../context/DataSyncContext';
@@ -37,6 +38,11 @@ const ReviewMode = () => {
   const handleExit = () => {
     setReviewMode(false);
     navigate('/');
+  };
+
+  const handleCardClick = () => {
+    // Toggle flip state
+    setIsFlipped(!isFlipped);
   };
 
   if (isFinished) {
@@ -119,9 +125,11 @@ const ReviewMode = () => {
             className="card-flipper"
             animate={{ rotateY: isFlipped ? 180 : 0 }}
             transition={{ duration: 0.4, ease: 'easeInOut' }}
+            onClick={handleCardClick}
+            style={{ cursor: 'pointer' }}
           >
             {/* Front */}
-            <div className="card-face card-face-front" onClick={() => !isFlipped && setIsFlipped(true)}>
+            <div className="card-face card-face-front">
               <span className="card-subject-tag">{subjectMap.get(currentCard.subject_id) || 'Sujet'}</span>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', width: '100%' }}>
                 <p className="card-content" style={{ fontSize: currentCard.question_image ? '1.5rem' : '2.25rem' }}>
@@ -184,7 +192,14 @@ const ReviewMode = () => {
               className="difficulty-buttons"
             >
               {ratingButtons.map(btn => (
-                <button key={btn.rating} className={`btn ${btn.className}`} onClick={() => handleRating(btn.rating)}>
+                <button 
+                  key={btn.rating} 
+                  className={`btn ${btn.className}`} 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRating(btn.rating);
+                  }}
+                >
                   {btn.label}
                 </button>
               ))}

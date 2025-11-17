@@ -12,8 +12,8 @@ const CardGrid = ({ filteredCards, setEditingCard, deleteCardWithSync, subjects 
   useEffect(() => {
     const fetchProgress = async () => {
       if (!session?.user?.id) return;
-      const allProgress = await db.user_card_progress.where('user_id').equals(session.user.id).toArray();
-      const map = new Map(allProgress.map(p => [p.card_id, p]));
+      const allProgress = await db.user_card_progress.where('userId').equals(session.user.id).toArray();
+      const map = new Map(allProgress.map(p => [p.cardId, p]));
       setProgressMap(map);
     };
     fetchProgress();

@@ -1,5 +1,4 @@
-// Modifications pour HomePage.jsx
-
+// src/components/HomePage.jsx
 import React, { useMemo, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDataSync } from '../context/DataSyncContext';
@@ -13,7 +12,6 @@ const HomePage = () => {
   const navigate = useNavigate();
   const [dueCardsCount, setDueCardsCount] = useState(0);
 
-  // Calculer le nombre de cartes à réviser en temps réel
   useEffect(() => {
     const calculateDueCards = async () => {
       const dueTodayCards = await getCardsToReview(['all'], { includeFuture: false });
@@ -58,9 +56,8 @@ const HomePage = () => {
   }, [cards, memos, subjects]);
 
   const handleStartReview = () => {
-    if (dueCardsCount > 0) {
-      navigate('/review/setup');
-    }
+    // Toujours permettre de lancer une révision
+    navigate('/review/setup');
   };
 
   const handleMemoClick = (memo) => {
@@ -154,16 +151,11 @@ const HomePage = () => {
             )}
           </div>
 
-          {/* Actions rapides */}
+          {/* Actions rapides - CORRIGÉ */}
           <div className="home-actions-card">
             <button 
               onClick={handleStartReview}
               className="home-action-btn"
-              disabled={dueCardsCount === 0}
-              style={{ 
-                opacity: dueCardsCount === 0 ? 0.5 : 1, 
-                cursor: dueCardsCount === 0 ? 'not-allowed' : 'pointer' 
-              }}
             >
               <div className="home-action-icon">
                 <Brain size={18} />

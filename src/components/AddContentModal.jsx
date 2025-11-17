@@ -323,15 +323,15 @@ const AddContentModal = ({ isOpen, onClose, cardToEdit, courseToEdit }) => {
               ) : (
                 <div className="flex flex-col gap-4">
                   <p className="text-xs text-muted">
-                    Collez votre texte. Séparez recto/verso par <code className="bg-muted px-1 rounded">/</code> et la matière par un autre <code className="bg-muted px-1 rounded">/</code>. Une ligne par carte.
+                    Collez votre texte. Séparez recto/verso par <code className="bg-muted px-1 rounded">#</code> et la matière par un autre <code className="bg-muted px-1 rounded">#</code>. Une ligne par carte.
                   </p>
                   <p className="text-xs text-muted">
-                    Exemple : <code className="bg-muted px-1 rounded">Capitale de France / Paris / Géographie</code>
+                    Exemple : <code className="bg-muted px-1 rounded">Capitale de France # Paris # Géographie</code>
                   </p>
                   <textarea 
                     value={bulkText} 
                     onChange={(e) => setBulkText(e.target.value)} 
-                    placeholder="Question / Réponse / Matière&#10;Question 2 / Réponse 2 / Matière 2" 
+                    placeholder="Question # Réponse # Matière&#10;Question 2 # Réponse 2 # Matière 2"
                     className="textarea" 
                     rows="10"
                   />

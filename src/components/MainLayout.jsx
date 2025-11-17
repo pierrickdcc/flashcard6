@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import AppHeader from './AppHeader';
 import NavigationBar from './NavigationBar';
@@ -8,16 +8,16 @@ import SyncIndicator from './SyncIndicator'; // ← NOUVEAU
 import { useUIState } from '../context/UIStateContext';
 import { useAuth } from '../context/AuthContext';
 import { useDataSync } from '../context/DataSyncContext';
-import ProfileSideMenu from './ProfileSideMenu';
-import { useState } from 'react';
 
 // Import all modals
+import ProfileModal from './ProfileModal';
 import AddContentModal from './AddContentModal';
 import AddSubjectModal from './AddSubjectModal';
 import ConfigModal from './ConfigModal';
 import DeleteSubjectModal from './DeleteSubjectModal';
 import SignOutConfirmationModal from './SignOutConfirmationModal';
 import MemoModal from './MemoModal';
+import ReviewSessionSetup from './ReviewSessionSetup';
 
 const MainLayout = ({ children }) => {
   const {
@@ -37,16 +37,23 @@ const MainLayout = ({ children }) => {
     setShowMemoModal,
     memoToEdit,
     subjectToDelete,
+    showReviewSetupModal,
+    setShowReviewSetupModal,
   } = useUIState();
 
-  const [isSideMenuOpen, setIsSideMenuOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const { session } = useAuth();
-  const { signOut } = useDataSync();
+  const { signOut, subjects, startReview } = useDataSync();
 
-  const toggleSideMenu = () => {
-    console.log("Toggling side menu from MainLayout");
-    setIsSideMenuOpen(!isSideMenuOpen);
+  const handleStartReview = async (options) => {
+    const subjectFilter = options.subjectId === 'all' ? ['all'] : [options.subjectId];
+    const success = await startReview(subjectFilter, options.isCramMode, options.includeFuture);
+    if (success) {
+      setShowReviewSetupModal(false);
+    }
   };
+
+  const toggleProfileModal = () => setIsProfileModalOpen(!isProfileModalOpen);
 
   const location = useLocation();
   const currentPath = location.pathname;
@@ -62,22 +69,10 @@ const MainLayout = ({ children }) => {
 
   return (
     <div className="min-h-screen bg-background-body">
-      <div className="relative">
-        {location.pathname !== '/login' && (
-          <>
-            <AppHeader onProfileClick={toggleSideMenu} />
-            <ProfileSideMenu
-              isOpen={isSideMenuOpen}
-              onClose={() => setIsSideMenuOpen(false)}
-              userEmail={session?.user?.email}
-              onSignOut={signOut}
-            />
-          </>
-        )}
-      </div>
+      {location.pathname !== '/login' && <AppHeader />}
 
       <StatsBanner />
-      <NavigationBar onProfileClick={toggleSideMenu} />
+      <NavigationBar onProfileClick={toggleProfileModal} />
       <main className="pb-20 md:pb-0">
           {children}
       </main>
@@ -106,6 +101,18 @@ const MainLayout = ({ children }) => {
         isOpen={showMemoModal}
         onClose={() => setShowMemoModal(false)}
         memoToEdit={memoToEdit}
+      />
+      <ReviewSessionSetup
+        isOpen={showReviewSetupModal}
+        onClose={() => setShowReviewSetupModal(false)}
+        onStartReview={handleStartReview}
+        subjects={subjects}
+      />
+      <ProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        userEmail={session?.user?.email}
+        onSignOut={signOut}
       />
     </div>
   );

@@ -26,6 +26,7 @@ export const UIStateProvider = ({ children }) => {
   // MODIFIÉ : Renommage pour plus de clarté
   const [showMemoModal, setShowMemoModal] = useState(false);
   const [memoToEdit, setMemoToEdit] = useState(null);
+  const [showReviewSetupModal, setShowReviewSetupModal] = useState(false);
 
   const debouncedSetSearchTerm = useDebouncedCallback((value) => {
     setSearchTerm(value);
@@ -66,6 +67,7 @@ export const UIStateProvider = ({ children }) => {
     // MODIFIÉ : Exposition des nouveaux noms
     showMemoModal, setShowMemoModal,
     memoToEdit, setMemoToEdit,
+    showReviewSetupModal, setShowReviewSetupModal,
   };
 
   return (

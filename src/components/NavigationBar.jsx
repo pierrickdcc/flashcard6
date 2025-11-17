@@ -21,20 +21,18 @@ const NavigationBar = ({ onProfileClick }) => {
             <span>{text}</span>
           </NavLink>
         ))}
-        <button 
+        <a
+          href="#"
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            console.log("Profile button clicked in navigation");
             if (onProfileClick) onProfileClick();
           }} 
-          className="nav-link"
-          type="button"
-          style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+          className="nav-link md:hidden"
         >
           <User size={20} />
           <span>Profil</span>
-        </button>
+        </a>
       </div>
     </nav>
   );

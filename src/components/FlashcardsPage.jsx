@@ -11,14 +11,13 @@ import toast from 'react-hot-toast';
 const CARDS_PER_PAGE = 12;
 
 const FlashcardsPage = () => {
-  const { cards, subjects = [], updateCard, deleteCard, getCardsToReview, startReview } = useDataSync();
-  const { viewMode, setViewMode } = useUIState();
+  const { cards, subjects = [], updateCard, deleteCard, getCardsToReview } = useDataSync();
+  const { viewMode, setViewMode, showReviewSetupModal, setShowReviewSetupModal } = useUIState();
 
   const [selectedSubject, setSelectedSubject] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [editingCard, setEditingCard] = useState(null);
-  const [showReviewSetup, setShowReviewSetup] = useState(false);
   const [dueCardsCount, setDueCardsCount] = useState(0);
 
   useEffect(() => {
@@ -64,17 +63,6 @@ const FlashcardsPage = () => {
     setEditingCard(null);
   };
 
-  const handleStartReview = async (options) => {
-    const subjectFilter = options.subjectId === 'all' ? ['all'] : [options.subjectId];
-    const success = await startReview(subjectFilter, options.isCramMode, options.includeFuture);
-    if (success) {
-      setShowReviewSetup(false);
-    } else {
-      setShowReviewSetup(false);
-      toast.error("Aucune carte à réviser pour cette sélection.");
-    }
-  };
-
    return (
     <div className="main-content">
       <div className="flashcards-page-header">
@@ -95,22 +83,23 @@ const FlashcardsPage = () => {
         </div>
       )}
 
-      <div className="toolbar">
-        <div className="flex items-center gap-4 flex-grow">
-          <div className="search-bar" style={{ maxWidth: '300px' }}>
-            <Search size={18} className="search-icon" />
-            <input
-              type="text"
-              placeholder="Rechercher une carte..."
-              className="search-input"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
+      <div className="toolbar flex-wrap">
+        <div className="search-bar flex-grow" style={{ minWidth: '200px', maxWidth: '400px' }}>
+          <Search size={18} className="search-icon" />
+          <input
+            type="text"
+            placeholder="Rechercher une carte..."
+            className="search-input"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
           <select
             value={selectedSubject}
             onChange={(e) => setSelectedSubject(e.target.value)}
             className="select"
+            style={{ minWidth: '180px' }}
           >
             <option value="all">Toutes les matières</option>
             {subjects.map((s) => (
@@ -121,13 +110,13 @@ const FlashcardsPage = () => {
           </select>
           <button
             className="btn btn-primary flex items-center gap-2"
-            onClick={() => setShowReviewSetup(true)}
+            onClick={() => setShowReviewSetupModal(true)}
           >
             <Brain size={18} />
-            <span>Réviser</span>
+            <span>Réviser ({dueCardsCount})</span>
           </button>
         </div>
-        <div className="view-toggle">
+        <div className="view-toggle ml-auto">
           <button
             onClick={() => setViewMode('grid')}
             className={`icon-btn ${
@@ -171,13 +160,6 @@ const FlashcardsPage = () => {
         currentPage={currentPage}
         totalPages={totalPages}
         onPageChange={setCurrentPage}
-      />
-
-      <ReviewSessionSetup
-        isOpen={showReviewSetup}
-        onClose={() => setShowReviewSetup(false)}
-        onStartReview={handleStartReview}
-        subjects={subjects}
       />
     </div>
   );

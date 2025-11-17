@@ -285,7 +285,7 @@ export const DataSyncProvider = ({ children }) => {
     userId: review.user_id,
     cardId: review.card_id,
     rating: review.rating,
-    reviewedAt: review.reviewed_at,
+    reviewed_at: review.reviewed_at,
     isSynced: 1,
   });
 
@@ -294,7 +294,7 @@ export const DataSyncProvider = ({ children }) => {
       user_id: session.user.id,
       card_id: review.cardId,
       rating: review.rating,
-      reviewed_at: review.reviewedAt,
+      reviewed_at: review.reviewed_at,
     };
 
     if (!String(review.id).startsWith('local_')) {
@@ -359,15 +359,29 @@ export const DataSyncProvider = ({ children }) => {
     let localUnsyncedSubjects = await db.subjects.where('isSynced').equals(0).toArray();
     if (localUnsyncedSubjects.length > 0) {
       for (const tempSubject of localUnsyncedSubjects.filter(s => String(s.id).startsWith('local_'))) {
-        const { data } = await supabase.from(TABLE_NAMES.SUBJECTS).insert(formatSubjectForSupabase(tempSubject)).select();
+        
+        const subjectPayload = formatSubjectForSupabase(tempSubject);
+
+        // Utilisez upsert pour créer OU récupérer le sujet existant par son nom
+        const { data, error } = await supabase.from(TABLE_NAMES.SUBJECTS)
+          .upsert(subjectPayload, {
+            onConflict: 'workspace_id, name', // Cible la contrainte UNIQUE de votre BDD
+            ignoreDuplicates: false // Assure que la ligne (même existante) est retournée
+          })
+          .select()
+          .single(); // Demande à Supabase de retourner la ligne insérée ou en conflit
+
         if (data) {
-          const serverSubject = data[0];
+          const serverSubject = data;
           await db.transaction('rw', db.subjects, db.cards, db.courses, async () => {
             await db.cards.where('subject_id').equals(tempSubject.id).modify({ subject_id: serverSubject.id, isSynced: 0 });
             await db.courses.where('subject_id').equals(tempSubject.id).modify({ subject_id: serverSubject.id, isSynced: 0 });
             await db.subjects.delete(tempSubject.id);
+            // Assurez-vous d'utiliser formatSubjectFromSupabase pour la cohérence
             await db.subjects.put(formatSubjectFromSupabase(serverSubject));
           });
+        } else {
+          console.error("Erreur lors de l'upsert du sujet:", error);
         }
       }
       const subjectsToUpdate = localUnsyncedSubjects.filter(s => !String(s.id).startsWith('local_'));
@@ -460,24 +474,33 @@ export const DataSyncProvider = ({ children }) => {
         }
     }
 
-    let localUnsyncedReviewHistory = await db.review_history.where('isSynced').equals(0).toArray();
-    if (localUnsyncedReviewHistory.length > 0) {
-        for (const tempReview of localUnsyncedReviewHistory.filter(r => String(r.id).startsWith('local_'))) {
-            if (String(tempReview.cardId).startsWith('local_')) continue;
-            const { data } = await supabase.from(TABLE_NAMES.REVIEW_HISTORY).insert(formatReviewHistoryForSupabase(tempReview)).select();
-            if (data) {
-                const serverReview = data[0];
-                await db.review_history.delete(tempReview.id);
-                await db.review_history.put(formatReviewHistoryFromSupabase(serverReview));
-            }
-        }
+      // ---------------------------------------------
+      // 3G. GÉRER L'HISTORIQUE (REVIEW_HISTORY)
+      // ---------------------------------------------
+      // (On relit au cas où les card_id ont changé)
+      let localUnsyncedHistory = await db.review_history.where('isSynced').equals(0).toArray();
+      if (localUnsyncedHistory.length > 0) {
+        console.log(`📤 Upload de ${localUnsyncedHistory.length} historique(s)...`);
 
-        const historyToUpdate = localUnsyncedReviewHistory.filter(r => !String(r.id).startsWith('local_'));
-        if(historyToUpdate.length > 0) {
-             await supabase.from(TABLE_NAMES.REVIEW_HISTORY).upsert(historyToUpdate.map(formatReviewHistoryForSupabase), { onConflict: 'id' });
-             await db.review_history.where('id').anyOf(historyToUpdate.map(r => r.id)).modify({ isSynced: 1 });
+        const formattedHistory = localUnsyncedHistory.map(h => {
+          // S'assurer que le cardId n'est pas local
+          if (String(h.cardId).startsWith('local_')) {
+            console.warn(`⚠️ Historique ${h.id} ignoré, carte ${h.cardId} non encore synchro.`);
+            return null; // On ne peut pas l'envoyer
+          }
+          // Vous aurez besoin d'une fonction formatHistoryForSupabase
+          return formatHistoryForSupabase(h);
+        }).filter(Boolean); // Filtrer les entrées nulles
+
+        if (formattedHistory.length > 0) {
+          const { error } = await supabase.from('review_history').upsert(formattedHistory, { onConflict: 'id' });
+          if (error) throw error;
+
+          // Marquer comme synchronisé
+          await db.review_history.where('id').anyOf(localUnsyncedHistory.map(h => h.id)).modify({ isSynced: 1 });
+          console.log(`✅ ${formattedHistory.length} historique(s) synchronisé(s).`);
         }
-    }
+      }
   };
 
   const handleImport = async (jsonString) => {
@@ -555,14 +578,7 @@ export const DataSyncProvider = ({ children }) => {
       pushLocalChanges();
     }
 
-    await db.review_history.add({
-      id: `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      userId: userId,
-      cardId: cardId,
-      rating: rating,
-      reviewedAt: new Date().toISOString(),
-      isSynced: 0,
-    });
+    
   };
 
   const updateCard = async (id, updates) => {
@@ -765,6 +781,23 @@ export const DataSyncProvider = ({ children }) => {
         reviewCount: (cardToUpdate.reviewCount || 0) + 1,
       });
     }
+
+    // === AJOUTER CE BLOC ===
+    // Enregistrer l'événement de révision dans l'historique
+    try {
+      await db.review_history.add({
+        id: `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        cardId: cardId,
+        userId: userId,
+        rating: rating, // Le bouton cliqué (1-5)
+        reviewed_at: new Date().toISOString(),
+        duration_ms: 0, // Optionnel : vous pourriez calculer le temps passé
+        isSynced: 0
+      });
+    } catch (error) {
+      console.error("Impossible d'enregistrer l'historique de révision :", error);
+    }
+    // === FIN DU BLOC AJOUTÉ ===
 
     if (isOnline) {
       pushLocalChanges();

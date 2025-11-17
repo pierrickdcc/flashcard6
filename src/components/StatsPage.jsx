@@ -10,6 +10,7 @@ import CalendarHeatmap from 'react-calendar-heatmap';
 import 'react-calendar-heatmap/dist/styles.css';
 import { Tooltip as ReactTooltip } from 'react-tooltip';
 import { TrendingUp, BookOpen, Flame, Target, BrainCircuit, BarChart3, ListTodo } from 'lucide-react';
+import { useMediaQuery } from '../utils/useMediaQuery';
 
 const COLORS = ['#3B82F6', '#8B5CF6', '#10B981', '#F59E0B', '#EF4444', '#6366F1', '#EC4899', '#14B8A6'];
 const PIE_COLORS = {
@@ -21,6 +22,9 @@ const PIE_COLORS = {
 
 const StatsPage = () => {
   const { cards = [], subjects = [], courses = [], memos = [] } = useDataSync();
+  const isDesktop = useMediaQuery('(min-width: 1200px)');
+  const isTablet = useMediaQuery('(min-width: 768px)');
+  const isMobile = useMediaQuery('(max-width: 767px)');
   const userCardProgress = useLiveQuery(() => db.user_card_progress.toArray(), []);
   const reviewHistory = useLiveQuery(() => db.review_history.toArray(), []);
 
@@ -383,7 +387,7 @@ const StatsPage = () => {
                     fontSize: '0.875rem'
                   }}
                 />
-                <Legend wrapperStyle={{ fontSize: '0.8rem' }} />
+                {!isMobile && <Legend wrapperStyle={{ fontSize: '0.8rem' }} />}
               </PieChart>
             </ResponsiveContainer>
           ) : (
@@ -453,7 +457,7 @@ const StatsPage = () => {
         </div>
 
         {/* Cartes Difficiles */}
-        <div className="glass-card" style={{ gridColumn: 'span 3' }}>
+        <div className="glass-card" style={{ gridColumn: isDesktop ? 'span 3' : isTablet ? 'span 2' : 'span 1' }}>
             <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--text-heading-color)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <ListTodo size={20} />
                 Top 10 Cartes Difficiles
@@ -478,7 +482,7 @@ const StatsPage = () => {
         </div>
 
         {/* Calendrier d'Activité "Streak" */}
-        <div className="glass-card" style={{ gridColumn: 'span 3' }}>
+        <div className="glass-card" style={{ gridColumn: isDesktop ? 'span 3' : isTablet ? 'span 2' : 'span 1' }}>
           <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--text-heading-color)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <Flame size={20} />
             Calendrier d'Activité
@@ -517,7 +521,7 @@ const StatsPage = () => {
         </div>
 
         {/* Taux de réussite par matière */}
-        <div className="glass-card" style={{ gridColumn: 'span 2', minHeight: '300px' }}>
+        <div className="glass-card" style={{ gridColumn: isDesktop ? 'span 2' : 'span 1', minHeight: '300px' }}>
           <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--text-heading-color)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <BarChart3 size={20} />
             Taux de réussite par matière

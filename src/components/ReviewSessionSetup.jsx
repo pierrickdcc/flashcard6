@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const ReviewSessionSetup = ({ onStartReview, onClose, isOpen }) => {
+const ReviewSessionSetup = ({ onStartReview, onClose, isOpen, subjects = [] }) => {
   const [isCramMode, setIsCramMode] = useState(false);
   const [includeFuture, setIncludeFuture] = useState(false);
+  const [selectedSubject, setSelectedSubject] = useState('all');
 
   const handleStart = () => {
-    onStartReview({ isCramMode, includeFuture });
+    onStartReview({ isCramMode, includeFuture, subjectId: selectedSubject });
   };
 
   if (!isOpen) return null;
@@ -64,6 +65,24 @@ const ReviewSessionSetup = ({ onStartReview, onClose, isOpen }) => {
                     </div>
                   </label>
                 </div>
+              </div>
+
+              <div className="form-group">
+                <label className="label" htmlFor="subject-select">Matière</label>
+                <select
+                  id="subject-select"
+                  value={selectedSubject}
+                  onChange={(e) => setSelectedSubject(e.target.value)}
+                  className="select mt-2"
+                  style={{ width: '100%' }}
+                >
+                  <option value="all">Toutes les matières</option>
+                  {subjects.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="form-group">

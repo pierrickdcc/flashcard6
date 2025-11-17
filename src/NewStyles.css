@@ -2178,3 +2178,110 @@ html.dark .memo-card-redesign:hover {
         letter-spacing: 0.01em;
     }
 }
+/* Mode révision */
+.review-header {
+    width: 100%;
+    max-width: 56rem;
+    margin: 0 auto;
+    padding: 1rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    flex-shrink: 0;
+}
+.progress-container {
+    flex-grow: 1;
+}
+.progress-bar {
+    width: 100%;
+    background: var(--muted-bg);
+    border-radius: 99px;
+    height: 8px;
+    overflow: hidden;
+}
+.progress-bar-inner {
+    height: 100%;
+    background: var(--primary-gradient);
+    border-radius: 99px;
+    transition: width 0.3s ease-out;
+}
+.progress-text {
+    text-align: center;
+    font-size: 0.8rem;
+    margin-top: 0.25rem;
+    color: var(--text-muted);
+}
+.review-main {
+    flex-grow: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 1rem;
+    perspective: 1500px;
+    overflow: hidden; /* IMPORTANT: empêche le débordement */
+}
+.card-scene {
+    width: 100%;
+    max-width: 56rem;
+    aspect-ratio: 16 / 9;
+    max-height: 500px;
+    position: relative;
+    /* Ajout de contraintes pour mobile */
+    height: auto;
+    min-height: 300px;
+}
+.card-flipper {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.4s;
+}
+.card-flipper.is-flipped {
+    transform: rotateY(180deg);
+}
+.card-face {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    padding: 2rem;
+    border-radius: 24px;
+    background: var(--card-bg);
+    box-shadow: var(--shadow-xl);
+    border: 1px solid var(--border-color);
+    overflow: hidden; /* CRITIQUE: empêche le débordement */
+}
+.card-face-back {
+    transform: rotateY(180deg);
+}
+.card-subject-tag {
+    align-self: flex-start;
+    padding: 0.3rem 0.8rem;
+    background: var(--muted-bg);
+    border-radius: 99px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-color);
+}
+.card-content {
+    font-size: clamp(0.9rem, 3.5vw, 2rem); /* Réduit un peu la taille max */
+    font-weight: 500;
+    color: var(--text-heading-color);
+    text-align: center;
+    padding: 1rem;
+    /* NOUVEAUX STYLES CRITIQUES */
+    width: 100%;
+    overflow-y: auto; /* Permet le scroll si nécessaire */
+    overflow-x: hidden;
+    max-height: 100%; /* Limite la hauteur au conteneur */
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    hyphens: auto;
+    line-height: 1.3;
+}

@@ -8,7 +8,7 @@ import {
 } from 'recharts';
 import CalendarHeatmap from 'react-calendar-heatmap';
 import 'react-calendar-heatmap/dist/styles.css';
-import ReactTooltip from 'react-tooltip';
+import { Tooltip as ReactTooltip } from 'react-tooltip';
 import { TrendingUp, BookOpen, Flame, Target, BrainCircuit, BarChart3, ListTodo } from 'lucide-react';
 
 const COLORS = ['#3B82F6', '#8B5CF6', '#10B981', '#F59E0B', '#EF4444', '#6366F1', '#EC4899', '#14B8A6'];
@@ -73,12 +73,15 @@ const StatsPage = () => {
     const dataMap = new Map(last30Days.map(day => [day, { day: new Date(day).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }), cartes: 0, cours: 0, memos: 0 }]));
 
     [...cards, ...courses, ...memos].forEach(item => {
-      const createdAt = new Date(item.created_at || item.createdAt).toISOString().split('T')[0];
-      if (dataMap.has(createdAt)) {
-        const entry = dataMap.get(createdAt);
-        if ('question' in item) entry.cartes += 1;
-        else if ('title' in item) entry.cours += 1;
-        else entry.memos += 1;
+      const createdAtDate = item.created_at || item.createdAt;
+      if (createdAtDate && !isNaN(new Date(createdAtDate))) {
+        const createdAt = new Date(createdAtDate).toISOString().split('T')[0];
+        if (dataMap.has(createdAt)) {
+          const entry = dataMap.get(createdAt);
+          if ('question' in item) entry.cartes += 1;
+          else if ('title' in item) entry.cours += 1;
+          else entry.memos += 1;
+        }
       }
     });
 
@@ -476,9 +479,8 @@ const StatsPage = () => {
                 if (!value) return 'color-empty';
                 return `color-scale-${Math.min(4, value.count)}`;
               }}
-              tooltipDataAttrs={value => ({ 'data-tip': `${value.date}: ${value.count} révisions` })}
+              tooltipDataAttrs={value => ({ 'data-tooltip-id': 'heatmap-tooltip', 'data-tooltip-content': `${value.date}: ${value.count} révisions` })}
             />
-            <ReactTooltip />
           </div>
         </div>
 
@@ -551,6 +553,7 @@ const StatsPageWrapper = () => (
   <>
     <style>{heatmapStyles}</style>
     <StatsPage />
+    <ReactTooltip id="heatmap-tooltip" />
   </>
 );
 

@@ -1,0 +1,67 @@
+.card-face {
+  cursor: pointer;
+}
+
+.card-inner-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center; /* Centrer verticalement */
+  gap: 1rem;
+  width: 100%;
+  flex: 1; /* Prend l'espace disponible */
+  overflow: hidden; /* Empêche le contenu de déborder */
+  padding: 0.5rem 0;
+}
+
+.card-text {
+  width: 100%;
+  text-align: center;
+  /* La taille de la police sera gérée par le composant FitText */
+}
+
+.card-image {
+  max-width: 100%;
+  object-fit: contain;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  /* La hauteur est flexible mais limitée */
+  max-height: 40%; /* Par défaut, l'image ne prend pas plus de 40% */
+  flex-shrink: 1;
+}
+
+.card-spacer {
+  height: 24px;
+}
+
+/* --- Media Queries pour le mode mobile --- */
+
+@media (max-width: 768px) {
+  .card-scene {
+    /* Assure que la carte ne soit pas trop large et laisse de l'espace */
+    width: 95%;
+  }
+
+  .card-inner-content {
+    gap: 0.5rem;
+  }
+
+  .card-face {
+    padding: 1.5rem 1rem;
+  }
+
+  /* C'est ici que la magie opère pour le mobile */
+  .card-image {
+    max-height: 100px; /* Réduit TRES significativement la place de l'image */
+    order: 2; /* Place l'image après le texte */
+  }
+
+  .card-text {
+    order: 1; /* Place le texte avant l'image */
+    flex-grow: 1; /* Le texte prend toute la place verticale restante */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden; /* Nécessaire pour le composant FitText */
+  }
+}

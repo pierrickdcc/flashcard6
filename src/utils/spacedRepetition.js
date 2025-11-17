@@ -11,6 +11,19 @@ const getDueDate = (days) => {
   const date = new Date();
   date.setHours(5, 0, 0, 0); // Set to a consistent time to avoid timezone issues
   date.setDate(date.getDate() + days);
+
+  // Correction pour s'assurer que la date de révision n'est jamais dans le passé.
+  const today = new Date();
+  today.setHours(0, 0, 0, 0); // Compare with the very beginning of today.
+
+  if (date < today) {
+    // If calculated date is in the past, it's a bug. Default to tomorrow.
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(5, 0, 0, 0);
+    return tomorrow.toISOString();
+  }
+
   return date.toISOString();
 };
 

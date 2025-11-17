@@ -128,7 +128,7 @@ const StatsPage = () => {
   const activityStreakData = useMemo(() => {
     if (!reviewHistory) return [];
     return reviewHistory.reduce((acc, review) => {
-      const date = new Date(review.reviewedAt).toISOString().split('T')[0];
+      const date = new Date(review.reviewed_at).toISOString().split('T')[0];
       const existing = acc.find(item => item.date === date);
       if (existing) {
         existing.count++;

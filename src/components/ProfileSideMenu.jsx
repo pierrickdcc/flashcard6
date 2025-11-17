@@ -106,16 +106,9 @@ const ProfileSideMenu = ({ isOpen, onClose, userEmail, onSignOut }) => {
               </button>
             </div>
           </div>
-        </div>
-
-        <div className="border-t border-border-color my-2"></div>
-
-        <button onClick={onSignOut} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-red-500 hover:bg-red-500/10 transition-colors">
-          <LogOut size={18} />
-          <span className="font-medium">Se déconnecter</span>
-        </button>
-      </div>
-    </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 };
 

@@ -1,17 +1,18 @@
-// src/components/FlashcardsPage.jsx
 import React, { useState, useMemo, useEffect } from 'react';
 import { useDataSync } from '../context/DataSyncContext';
 import { useUIState } from '../context/UIStateContext';
 import CardGrid from './CardGrid';
 import CardTable from './CardTable';
 import Pagination from './Pagination';
+import ReviewSessionSetup from './ReviewSessionSetup';
 import { LayoutGrid, List, Brain, Search } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 const CARDS_PER_PAGE = 12;
 
 const FlashcardsPage = () => {
   const { cards, subjects = [], updateCard, deleteCard, getCardsToReview } = useDataSync();
-  const { viewMode, setViewMode, setShowReviewSetupModal } = useUIState();
+  const { viewMode, setViewMode, showReviewSetupModal, setShowReviewSetupModal } = useUIState();
 
   const [selectedSubject, setSelectedSubject] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -29,17 +30,21 @@ const FlashcardsPage = () => {
 
   const filteredCards = useMemo(() => {
     if (!cards) return [];
-    let cardsToFilter = selectedSubject === 'all'
-      ? cards
-      : cards.filter(card => card.subject_id === selectedSubject);
+
+    let cardsToFilter = cards;
+
+    if (selectedSubject !== 'all') {
+      cardsToFilter = cardsToFilter.filter(card => card.subject_id === selectedSubject);
+    }
 
     if (searchQuery.trim() !== '') {
-      const lowercasedQuery = searchQuery.toLowerCase();
-      cardsToFilter = cardsToFilter.filter(card =>
-        (card.question && card.question.toLowerCase().includes(lowercasedQuery)) ||
-        (card.answer && card.answer.toLowerCase().includes(lowercasedQuery))
-      );
+        const lowercasedQuery = searchQuery.toLowerCase();
+        cardsToFilter = cardsToFilter.filter(card =>
+            (card.question && card.question.toLowerCase().includes(lowercasedQuery)) ||
+            (card.answer && card.answer.toLowerCase().includes(lowercasedQuery))
+        );
     }
+
     return cardsToFilter;
   }, [cards, selectedSubject, searchQuery]);
 
@@ -48,18 +53,21 @@ const FlashcardsPage = () => {
   }, [selectedSubject, searchQuery]);
 
   const totalPages = Math.ceil(filteredCards.length / CARDS_PER_PAGE);
-  const paginatedCards = filteredCards.slice((currentPage - 1) * CARDS_PER_PAGE, currentPage * CARDS_PER_PAGE);
+  const paginatedCards = filteredCards.slice(
+    (currentPage - 1) * CARDS_PER_PAGE,
+    currentPage * CARDS_PER_PAGE
+  );
 
   const handleUpdateCard = async (cardId, updatedData) => {
     await updateCard(cardId, updatedData);
     setEditingCard(null);
   };
 
-  return (
+   return (
     <div className="main-content">
-      <div className="page-header">
+      <div className="flashcards-page-header">
         <h1>Flashcards</h1>
-        <p>Gérez et révisez vos cartes d'apprentissage.</p>
+        <p>Gérez et révisez vos cartes</p>
       </div>
 
       {dueCardsCount > 0 && (
@@ -95,15 +103,13 @@ const FlashcardsPage = () => {
           >
             <option value="all">Toutes les matières</option>
             {subjects.map((s) => (
-              <option key={s.id} value={s.id}>{s.name}</option>
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
             ))}
           </select>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {/* Bouton Réviser */}
           <button
-            className="btn btn-primary hidden md:flex items-center gap-2"
+            className="btn btn-primary flex items-center gap-2"
             onClick={() => setShowReviewSetupModal(true)}
           >
             <Brain size={18} />
@@ -129,30 +135,8 @@ const FlashcardsPage = () => {
           >
             <List size={20} />
           </button>
-
-          {/* Bascule de vue */}
-          <div className="view-toggle">
-            <button onClick={() => setViewMode('grid')} className={`icon-btn ${viewMode === 'grid' ? 'active' : ''}`} aria-label="Afficher en grille">
-              <LayoutGrid size={20} />
-            </button>
-            <button onClick={() => setViewMode('table')} className={`icon-btn ${viewMode === 'table' ? 'active' : ''}`} aria-label="Afficher en liste">
-              <List size={20} />
-            </button>
-          </div>
         </div>
       </div>
-
-      {/* Bouton Réviser pour mobile */}
-      <div className="md:hidden mt-4">
-        <button
-          className="btn btn-primary w-full flex items-center justify-center gap-2"
-          onClick={() => setShowReviewSetupModal(true)}
-        >
-          <Brain size={18} />
-          <span>Réviser ({dueCardsCount})</span>
-        </button>
-      </div>
-
 
       {viewMode === 'grid' ? (
         <CardGrid
@@ -172,13 +156,11 @@ const FlashcardsPage = () => {
         />
       )}
 
-      {totalPages > 1 && (
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          onPageChange={setCurrentPage}
-        />
-      )}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={setCurrentPage}
+      />
     </div>
   );
 };

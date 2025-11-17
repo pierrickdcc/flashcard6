@@ -1,4 +1,3 @@
-// src/components/CoursePage.jsx
 import React, { useState, useMemo } from 'react';
 import { useDataSync } from '../context/DataSyncContext';
 import { useNavigate } from 'react-router-dom';
@@ -38,9 +37,9 @@ const CoursePage = () => {
     const diffTime = Math.abs(now - date);
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     
-    if (diffDays <= 1) return "aujourd'hui";
-    if (diffDays <= 2) return "hier";
-    if (diffDays <= 7) return `il y a ${diffDays} jours`;
+    if (diffDays === 0) return "Aujourd'hui";
+    if (diffDays === 1) return "Hier";
+    if (diffDays < 7) return `Il y a ${diffDays} jours`;
     
     return new Intl.DateTimeFormat('fr-FR', {
       day: 'numeric',
@@ -53,7 +52,23 @@ const CoursePage = () => {
     navigate(`/courses/${courseId}`);
   };
 
-  const hasCourses = courses && courses.length > 0;
+  if (coursesBySubject.length === 0) {
+    return (
+      <div className="main-content">
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h1 className="text-2xl font-bold">Mes Cours</h1>
+            <p className="text-muted-foreground">Parcourez et gérez vos pages de cours</p>
+          </div>
+        </div>
+        <EmptyState
+          icon={BookOpen}
+          title="Aucun cours trouvé"
+          message="Ajoutez votre premier cours pour le voir apparaître ici."
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="main-content">
@@ -74,52 +89,38 @@ const CoursePage = () => {
         </div>
       </div>
 
-      {!hasCourses ? (
-        <EmptyState
-          icon={BookOpen}
-          title="Aucun cours pour le moment"
-          message="Commencez par ajouter votre premier cours pour le voir apparaître ici."
-        />
-      ) : coursesBySubject.length === 0 && searchQuery.trim() !== '' ? (
-        <EmptyState
-          icon={Search}
-          title="Aucun résultat"
-          message={`Aucun cours ne correspond à votre recherche "${searchQuery}".`}
-        />
-      ) : (
-        <div className="course-list">
-          {coursesBySubject.map(subject => (
-            <div key={subject.id} className="course-subject-section">
-              <h2>{subject.name}</h2>
-              <div className="course-items">
-                {subject.courses.map(course => (
-                  <div
-                    key={course.id}
-                    className="course-item"
-                    onClick={() => handleCourseClick(course.id)}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    <div className="course-item-main">
-                      <div className="course-item-icon">
-                        <FileText size={20} />
-                      </div>
-                      <div className="course-item-text">
-                        <h3>{course.title}</h3>
-                      </div>
+      <div className="course-list">
+        {coursesBySubject.map(subject => (
+          <div key={subject.id} className="course-subject-section">
+            <h2>{subject.name}</h2>
+            <div className="course-items">
+              {subject.courses.map(course => (
+                <div
+                  key={course.id}
+                  className="course-item"
+                  onClick={() => handleCourseClick(course.id)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <div className="course-item-main">
+                    <div className="course-item-icon">
+                      <FileText size={20} />
                     </div>
-                    <div className="course-item-meta">
-                      <span className="flex items-center gap-1.5">
-                        <Clock size={14} />
-                        Modifié {formatDate(course.updated_at)}
-                      </span>
+                    <div className="course-item-text">
+                      <h3>{course.title}</h3>
                     </div>
                   </div>
-                ))}
-              </div>
+                  <div className="course-item-meta">
+                    <span className="flex items-center gap-1.5">
+                      <Clock size={14} />
+                      Modifié {formatDate(course.updated_at)}
+                    </span>
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-      )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 };

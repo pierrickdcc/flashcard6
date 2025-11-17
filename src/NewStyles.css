@@ -408,25 +408,25 @@ body {
 /* Toolbar - AMÉLIORATION : Plus d'espacement */
 .toolbar {
   display: flex;
-+    flex-direction: column; /* Mobile-first: stack items */
-+    gap: 1rem; /* Add gap for mobile stacking */
-+    align-items: stretch; /* Stretch items to full width */
-+    margin-bottom: 1.5rem;
-+    padding: 1rem;
-+    background: var(--background-card);
-+    border-radius: 12px;
-+    border: 1px solid var(--border-color);
-+    box-shadow: var(--shadow-sm);
-+  }
-+  
-+  @media (min-width: 768px) {
-+    .toolbar {
-+      flex-direction: row; /* Desktop: side-by-side */
-+      align-items: center;
-+      justify-content: space-between;
-+      gap: 1.5rem; /* Add gap for desktop */
-+    }
-+  }
+    flex-direction: column; /* Mobile-first: stack items */
+    gap: 1rem; /* Add gap for mobile stacking */
+    align-items: stretch; /* Stretch items to full width */
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: var(--background-card);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-sm);
+  }
+
+  @media (min-width: 768px) {
+    .toolbar {
+      flex-direction: row; /* Desktop: side-by-side */
+      align-items: center;
+      justify-content: space-between;
+      gap: 1.5rem; /* Add gap for desktop */
+    }
+  }
 
 .view-toggle {
   display: flex;

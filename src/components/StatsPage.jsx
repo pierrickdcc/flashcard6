@@ -48,7 +48,7 @@ const StatsPage = () => {
     const totalDue = dueToday + cardsWithoutProgress;
 
     const progressWithFactor = userCardProgress.filter(p => p.easeFactor && p.easeFactor > 0);
-    const avgEase = progressWithFactor.length > 0 ? progressWithFactor.reduce((acc, p) => acc + p.easeFactor, 0) / progressWithFactor.length :
+    const avgEase = progressWithFactor.length > 0 ? progressWithFactor.reduce((acc, p) => acc + p.easeFactor, 0) / progressWithFactor.length : 1.3;
     const masteryPercent = Math.round(((avgEase - 1.3) / (3.0 - 1.3)) * 100);
 
     return {

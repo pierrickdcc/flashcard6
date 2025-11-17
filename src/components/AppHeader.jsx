@@ -31,7 +31,6 @@ const AppHeader = ({ onProfileClick }) => {
             >
               <User size={20} />
             </button>
-            {/* Le menu du profil sera rendu ici par le layout parent */}
           </div>
         </div>
       </div>
